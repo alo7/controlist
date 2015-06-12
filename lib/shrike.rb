@@ -1,5 +1,12 @@
 require "shrike/version"
+require "shrike/handler"
 
 module Shrike
-  # Your code goes here...
+
+  def self.handle(*models)
+    models.each do |model|
+      Handler.handle model
+    end
+  end
+
 end
