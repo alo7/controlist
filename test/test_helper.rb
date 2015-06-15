@@ -7,6 +7,7 @@ require 'minitest/pride'
 require 'sqlite3'
 require 'shrike'
 require 'models/user'
+require 'models/clazz'
 
 ROOT_PATH = File.expand_path("../..", __FILE__)
 
@@ -17,14 +18,18 @@ ActiveRecord::Base.establish_connection(
   :database => "test/test.sqlite3",
   :pool=>5,
   :timeout=>5000)
-class CreateUsers < ActiveRecord::Migration
+class CreateSchema < ActiveRecord::Migration
   def change
     create_table :users do |t|
+      t.string :name
+      t.integer :clazz_id
+    end
+    create_table :clazzs do |t|
       t.string :name
     end
   end
 end
-CreateUsers.new.change
+CreateSchema.new.change
 
 class ActiveSupport::TestCase
   ActiveRecord::Migration.check_pending!
@@ -41,4 +46,24 @@ class ActiveSupport::TestCase
   # Add more helper methods to be used by all tests here...
 end
 
-Shrike.handle User
+ActiveRecord::Base.logger = Logger.new(STDOUT)
+
+TEST_PERMISSIONS = {
+        User => Shrike::Permission::Package.new([
+          Shrike::Permission::Item.new(User, :read, "name", "'Tom'")
+              ]),
+        Clazz => Shrike::Permission::Package.new([
+          Shrike::Permission::Item.new(Clazz, :read, "name", "'Grade 1'")
+              ])
+      }
+class PermissionProvider
+  class << self
+    def get_permission_package(klass)
+      TEST_PERMISSIONS[klass]
+    end
+  end
+end
+
+Shrike::Handler.permission_provider = PermissionProvider
+
+Shrike.handle

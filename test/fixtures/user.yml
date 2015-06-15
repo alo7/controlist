@@ -1,6 +1,20 @@
 one:
   id: 1
   name: Tom
+  clazz_id: 1
 two:
   id: 2
   name: Jerry
+  clazz_id: 1
+three:
+  id: 3
+  name: Henry
+  clazz_id: 2
+four:
+  id: 4
+  name: Tom
+  clazz_id: 2
+five:
+  id: 5
+  name: MAF
+  clazz_id: 2
