@@ -5,11 +5,11 @@ module Shrike
 
       attr_reader :list_create, :list_read, :list_update, :list_delete
 
-      def initialize(permissions=[])
-        @list_create = []
-        @list_read = []
-        @list_update = []
-        @list_delete = []
+      def initialize(*permissions)
+        @list_create = {}
+        @list_read = {}
+        @list_update = {}
+        @list_delete = {}
         permissions.select{|permission| permission.operation == CREATE}
                    .each{|permission| add_list_create permission}
         permissions.select{|permission| permission.operation == READ}
@@ -21,19 +21,19 @@ module Shrike
       end
 
       def add_list_create(permission)
-        @list_create << permission
+        (@list_create[permission.klass] ||= []) << permission
       end
 
       def add_list_read(permission)
-        @list_read << permission
+        (@list_read[permission.klass] ||= []) << permission
       end
 
       def add_list_update(permission)
-        @list_update << permission
+        (@list_update[permission.klass] ||= []) << permission
       end
 
       def add_list_delete(permission)
-        @list_delete << permission
+        (@list_delete[permission.klass] ||= []) << permission
       end
 
     end

@@ -1,3 +1,4 @@
+ROOT_PATH = File.expand_path("../..", __FILE__)
 require 'rails'
 require 'active_record'
 require 'rails/test_help'
@@ -5,32 +6,13 @@ require 'minitest/autorun'
 require 'minitest/unit'
 require 'minitest/pride'
 require 'sqlite3'
+require 'simplecov'
+SimpleCov.start
+
 require 'shrike'
 require 'models/user'
 require 'models/clazz'
-
-ROOT_PATH = File.expand_path("../..", __FILE__)
-
-# prepare test data
-`rm test/test.sqlite3`
-ActiveRecord::Base.establish_connection(
-  :adapter  => "sqlite3",
-  :database => "test/test.sqlite3",
-  :pool=>5,
-  :timeout=>5000)
-class CreateSchema < ActiveRecord::Migration
-  def change
-    create_table :users do |t|
-      t.string :name
-      t.integer :clazz_id
-      t.integer :age
-    end
-    create_table :clazzs do |t|
-      t.string :name
-    end
-  end
-end
-CreateSchema.new.change
+require 'migrate'
 
 class ActiveSupport::TestCase
   ActiveRecord::Migration.check_pending!
@@ -49,25 +31,18 @@ end
 
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
-TEST_PERMISSIONS = {
-        User => Shrike::Permission::Package.new([
-          Shrike::Permission::Item.new(User, Shrike::Permission::READ, true, [
-            {property: "name", value: "'Tom'"},
-            {property: "name", value: "'Grade 1'", relation: "clazz"},
-            {property: "age", value: "5", operator: ">="}])
-              ]),
-        Clazz => Shrike::Permission::Package.new([
-          Shrike::Permission::Item.new(Clazz, Shrike::Permission::READ, true, property: "name", value: "'Grade 1'")
-              ])
-      }
 class PermissionProvider
+
   class << self
-    def get_permission_package(klass)
-      TEST_PERMISSIONS[klass]
+    def get_permission_package
+      Thread.current[:permission_package]
+    end
+
+    def set_permission_package(package)
+      Thread.current[:permission_package] = package
     end
   end
+
 end
 
-Shrike::Handler.permission_provider = PermissionProvider
-
-Shrike.handle
+Shrike.initialize PermissionProvider

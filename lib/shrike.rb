@@ -4,8 +4,14 @@ require "shrike/handler"
 
 module Shrike
 
-  def self.handle(*models)
-    Handler.handle *models
+
+  def self.initialize(permission_provider)
+    @permission_provider = permission_provider
+    Handler.handle
+  end
+
+  def self.permission_provider
+    @permission_provider
   end
 
 end

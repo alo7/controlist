@@ -2,21 +2,16 @@ module Shrike
 
   class Handler
 
-    @permissions
-
     class << self
 
-      attr_accessor :permission_provider
-
-      def handle(*clazz)
+      def handle
 
         ActiveRecord::Relation.class_eval do
           def build_arel_with_shrike
-            raise "Shrike::Handler.permission_provider is nil" if Shrike::Handler.permission_provider.nil?
             unless @has_shrike
               self.instance_variable_set(:@has_shrike, true)
-              permission_package = Shrike::Handler.permission_provider.get_permission_package(@klass)
-              permissions = permission_package.list_read
+              permission_package = Shrike.permission_provider.get_permission_package
+              permissions = permission_package.list_read[@klass]
               if permissions.empty?
                 self.where!("1 != 1")
               else
