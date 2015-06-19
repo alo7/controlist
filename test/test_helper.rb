@@ -50,10 +50,10 @@ ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 TEST_PERMISSIONS = {
         User => Shrike::Permission::Package.new([
-          Shrike::Permission::Item.new(User, :read, property: "name", value: "'Tom'")
+          Shrike::Permission::Item.new(User, Shrike::Permission::READ, property: "name", value: "'Tom'")
               ]),
         Clazz => Shrike::Permission::Package.new([
-          Shrike::Permission::Item.new(Clazz, :read, property: "name", value: "'Grade 1'")
+          Shrike::Permission::Item.new(Clazz, Shrike::Permission::READ, property: "name", value: "'Grade 1'")
               ])
       }
 class PermissionProvider
