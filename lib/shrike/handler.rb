@@ -21,11 +21,14 @@ module Shrike
                 self.where!("1 != 1")
               else
                 permissions.each do |permission|
-                  self.where!("#{permission.sql}") if permission.sql
+                  if permission.clause
+                    if permission.joins.size > 0
+                      self.joins!(*permission.joins) 
+                    end
+                    self.where!("#{permission.clause}")
+                  end
                 end
               end
-            else
-              puts ">>>>>>>>>>>>>>>>>>>>>>#{@klass} 0>>>>>>>>>>>>"
             end
             build_arel_without_shrike
           end

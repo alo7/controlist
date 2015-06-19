@@ -23,6 +23,7 @@ class CreateSchema < ActiveRecord::Migration
     create_table :users do |t|
       t.string :name
       t.integer :clazz_id
+      t.integer :age
     end
     create_table :clazzs do |t|
       t.string :name
@@ -50,10 +51,13 @@ ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 TEST_PERMISSIONS = {
         User => Shrike::Permission::Package.new([
-          Shrike::Permission::Item.new(User, Shrike::Permission::READ, property: "name", value: "'Tom'")
+          Shrike::Permission::Item.new(User, Shrike::Permission::READ, true, [
+            {property: "name", value: "'Tom'"},
+            {property: "name", value: "'Grade 1'", relation: "clazz"},
+            {property: "age", value: "5", operator: ">="}])
               ]),
         Clazz => Shrike::Permission::Package.new([
-          Shrike::Permission::Item.new(Clazz, Shrike::Permission::READ, property: "name", value: "'Grade 1'")
+          Shrike::Permission::Item.new(Clazz, Shrike::Permission::READ, true, property: "name", value: "'Grade 1'")
               ])
       }
 class PermissionProvider

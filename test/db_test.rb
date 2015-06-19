@@ -6,10 +6,8 @@ class DBTest < ActiveSupport::TestCase
   end
 
   def test_count
-    User.all.count
-    c = Clazz.joins(:users).count
-    p c
-    assert_equal 1, c
+    c = User.all.count
+    assert_equal 0, c
   end
 
 end

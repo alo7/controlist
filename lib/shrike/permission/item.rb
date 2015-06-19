@@ -2,51 +2,65 @@ module Shrike
   module Permission
     class Item
 
-      attr_accessor :klass, :operation, :is_allowed, :constrains, :table_name, :sql
+      attr_accessor :klass, :operation, :is_allowed, :constrains, :clause, :joins
       ##
-      # constrain includes :property, :value, :operator(default =), :is_allowed
+      # constrain includes :property, :value, :operator(default =), :relation, :clause
 
-      class << self
-        def build_sql(constrains, klass)
-          sql = ""
-          constrains.each do |constrain|
+      def initialize(klass, operation, is_allowed = true, constrains=nil)
+        self.klass = klass
+        self.operation = operation
+        self.is_allowed = is_allowed
+        self.joins = []
+        case constrains
+        when String
+          self.clause = constrains
+        when Array, Hash
+          constrains = [constrains] if Hash === constrains
+          self.constrains = constrains
+          self.clause = build_clause
+          self.clause = "not (#{self.clause})" if self.is_allowed == false
+        else
+          raise ArgumentError.new("constrains has unknown type #{constrains.class}") unless constrains.nil?
+        end
+      end
+
+      def build_clause
+        clause = ""
+        self.constrains.each do |constrain|
+          table_name = append_joins constrain[:relation] if constrain[:relation]
+          if String === constrain
+            part_clause = constrain
+          else
+            table_name ||= (constrain[:table_name] || self.klass.table_name)
             property = constrain[:property]
             raise ArgumentError.new("property could not be nil") if property.nil?
             value = constrain[:value]
             operator = constrain[:operator] || '='
-            table_name = constrain[:table_name] || klass.table_name
             if value.nil?
               # process is/is not NULL
               if operator.include?("is")
-                part_sql = "(#{table_name}.#{property} is NULL)"
+                part_clause = "(#{table_name}.#{property} is NULL)"
               else
-                part_sql = "#{table_name}.#{property} #{operator} NULL"
+                part_clause = "#{table_name}.#{property} #{operator} NULL"
               end
             else
               raise "value require string type" unless String === value
-              part_sql = "#{table_name}.#{property} #{operator} #{value}"
+              part_clause = "#{table_name}.#{property} #{operator} #{value}"
             end
-            part_sql = "not (#{part_sql})" if constrain[:is_allowed] == false
-            sql += " and " if sql.length > 0
-            sql += "(#{part_sql})"
           end
-          sql
+          clause += " and " if clause.length > 0
+          clause += "(#{part_clause})"
         end
+        clause
       end
 
-      def initialize(klass, operation, constrains=nil)
-        self.klass = klass
-        self.operation = operation
-        case constrains
-        when String
-          self.sql = constrains
-        when Array, Hash
-          constrains = [constrains] if Hash === constrains
-          self.constrains = constrains
-          self.sql = self.class.build_sql(self.constrains, self.klass)
-        else
-          raise ArgumentError.new("constrains has unknown type #{constrains.class}") unless constrains.nil?
-        end
+      def append_joins(relation_name)
+        reflections = self.klass.reflections
+        # Rails 4.2 use string key, instead Rails 4.1 use symbol key
+        relation = reflections[relation_name.to_s] || reflections[relation_name.to_sym]
+        raise "Relation #{relation_name} Not found for class #{self.klass}!" if relation.nil?
+        self.joins << relation_name.to_sym
+        relation.table_name
       end
 
 
