@@ -64,9 +64,7 @@ class FeatureTest < ActiveSupport::TestCase
       Item.new(User, UPDATE, false, [
         SimpleConstrain.new("name", "Tom"),
         SimpleConstrain.new("name", "Grade 1", relation: "clazz"),
-        AdvancedConstrain.new(property: "age", value: "5", type: Integer, operator: ">="),
         SimpleConstrain.new("age", "null"),
-        AdvancedConstrain.new(clause: "age != 100")
       ])))
     user = User.find 1
     assert_raise(PermissionError) {

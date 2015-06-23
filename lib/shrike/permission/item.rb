@@ -40,18 +40,38 @@ module Shrike
       end
 
       def check_for_persistence(object)
-        raise PermissionError.new
+        self.constrains.each do |constrain|
+          is_valid = true
+          check_value = !constrain.value.nil?
+          property = constrain.property
+          changed = object.changed
+          if !self.is_allowed
+            if check_value
+              change = object.changes[property]
+              is_valid = false if change && change.first == constrain.value
+            else
+              is_valid = false if changed.include? property
+            end
+          end
+          raise PermissionError.new("Forbidden due to #{constrain.inspect}") unless is_valid
+        end
       end
 
       private
 
       def init_for_persistence(constrains)
-        return if constrains.nil?
-        if !(constrains.is_a?(Hash) ||constrains.is_a?(Array))
-          raise ArgumentError.new("constrains has unknown type #{constrains.class}")
-        end
-        constrains = [constrains] if constrains.is_a? Hash
-        constrains.each do |constrain|
+        if constrains.nil?
+          self.constrains = []
+          return
+        else
+          if !(constrains.is_a?(Hash) ||constrains.is_a?(Array))
+            raise ArgumentError.new("constrains has unknown type #{constrains.class}")
+          end
+          constrains = [constrains] if constrains.is_a? Hash
+          constrains.each do |constrain|
+            raise "Persistence checking only for SimpleConstrain, but got #{constrain}" if !constrain.instance_of?(SimpleConstrain)
+          end
+          self.constrains = constrains
         end
       end
 
