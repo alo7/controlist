@@ -11,6 +11,8 @@ require 'rails/test_help'
 require 'minitest/autorun'
 require 'minitest/unit'
 require 'minitest/pride'
+require "minitest/reporters"
+Minitest::Reporters.use!
 require 'sqlite3'
 
 # require shrike

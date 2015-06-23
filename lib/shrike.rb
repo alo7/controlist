@@ -1,4 +1,5 @@
 require "shrike/version"
+require "shrike/permission_error"
 require "shrike/permission"
 require "shrike/handler"
 

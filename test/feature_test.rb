@@ -10,11 +10,11 @@ class FeatureTest < ActiveSupport::TestCase
   def test_read_constrains_with_join
     PermissionProvider.set_permission_package(Package.new(
       Item.new(User, READ, true, [
-        {property: "name", value: "'Tom'"},
-        {property: "name", value: "'Grade 1'", relation: "clazz"},
-        {property: "age", value: "5", operator: ">="},
-        {property: "age", value: "null"},
-        {clause: "age != 100"}
+        SimpleConstrain.new("name", "Tom"),
+        SimpleConstrain.new("name", "Grade 1", relation: "clazz"),
+        AdvancedConstrain.new(property: "age", value: "5", type: Integer, operator: ">="),
+        SimpleConstrain.new("age", "null"),
+        AdvancedConstrain.new(clause: "age != 100")
       ])))
     relation = User.all
     relation.to_sql
@@ -40,10 +40,38 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_read_constrains_error
-    assert_raise(ArgumentError) { 
+    assert_raise(ArgumentError) {
       PermissionProvider.set_permission_package(Package.new(
         Item.new(User, READ, true, Object.new)
       ))
+    }
+  end
+
+  def test_update_fail_without_permissions
+    PermissionProvider.set_permission_package(Package.new(
+      Item.new(User, READ)
+    ))
+    user = User.find 1
+    assert_raise(PermissionError) {
+      user.name = "Test"
+      user.save
+    }
+  end
+
+  def test_update_constrains_with_join
+    PermissionProvider.set_permission_package(Package.new(
+      Item.new(User, READ),
+      Item.new(User, UPDATE, false, [
+        SimpleConstrain.new("name", "Tom"),
+        SimpleConstrain.new("name", "Grade 1", relation: "clazz"),
+        AdvancedConstrain.new(property: "age", value: "5", type: Integer, operator: ">="),
+        SimpleConstrain.new("age", "null"),
+        AdvancedConstrain.new(clause: "age != 100")
+      ])))
+    user = User.find 1
+    assert_raise(PermissionError) {
+      user.name = "Test"
+      user.save
     }
   end
 

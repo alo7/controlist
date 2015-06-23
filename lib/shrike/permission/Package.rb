@@ -10,13 +10,13 @@ module Shrike
         @list_read = {}
         @list_update = {}
         @list_delete = {}
-        permissions.select{|permission| permission.operation == CREATE}
+        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(CREATE)}
                    .each{|permission| add_list_create permission}
-        permissions.select{|permission| permission.operation == READ}
+        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(READ)}
                    .each{|permission| add_list_read permission}
-        permissions.select{|permission| permission.operation == UPDATE}
+        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(UPDATE)}
                    .each{|permission| add_list_update permission}
-        permissions.select{|permission| permission.operation == DELETE}
+        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(DELETE)}
                    .each{|permission| add_list_delete permission}
       end
 
