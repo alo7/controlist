@@ -1,4 +1,10 @@
 ROOT_PATH = File.expand_path("../..", __FILE__)
+
+require 'simplecov'
+SimpleCov.start do
+  add_filter '/test/'
+end
+
 require 'rails'
 require 'active_record'
 require 'rails/test_help'
@@ -6,9 +12,8 @@ require 'minitest/autorun'
 require 'minitest/unit'
 require 'minitest/pride'
 require 'sqlite3'
-require 'simplecov'
-SimpleCov.start
 
+# require shrike
 require 'shrike'
 require 'models/user'
 require 'models/clazz'

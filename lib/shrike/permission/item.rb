@@ -27,26 +27,18 @@ module Shrike
       def build_clause
         clause = ""
         self.constrains.each do |constrain|
-          table_name = append_joins constrain[:relation] if constrain[:relation]
-          if String === constrain
-            part_clause = constrain
-          else
+          part_clause = constrain[:clause]
+          if part_clause.nil?
+            table_name = append_joins constrain[:relation] if constrain[:relation]
             table_name ||= (constrain[:table_name] || self.klass.table_name)
             property = constrain[:property]
-            raise ArgumentError.new("property could not be nil") if property.nil?
             value = constrain[:value]
-            operator = constrain[:operator] || '='
-            if value.nil?
-              # process is/is not NULL
-              if operator.include?("is")
-                part_clause = "(#{table_name}.#{property} is NULL)"
-              else
-                part_clause = "#{table_name}.#{property} #{operator} NULL"
-              end
-            else
-              raise "value require string type" unless String === value
-              part_clause = "#{table_name}.#{property} #{operator} #{value}"
-            end
+            raise ArgumentError.new("property could not be nil") if property.nil?
+            raise ArgumentError.new("value could not be nil") if value.nil?
+            raise "value require string type" unless String === value
+            default_operator = value.upcase == "NULL" ? 'is' : "="
+            operator = constrain[:operator] || default_operator
+            part_clause = "#{table_name}.#{property} #{operator} #{value}"
           end
           clause += " and " if clause.length > 0
           clause += "(#{part_clause})"

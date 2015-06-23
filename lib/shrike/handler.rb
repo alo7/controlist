@@ -11,8 +11,8 @@ module Shrike
             unless @has_shrike
               self.instance_variable_set(:@has_shrike, true)
               permission_package = Shrike.permission_provider.get_permission_package
-              permissions = permission_package.list_read[@klass]
-              if permissions.empty?
+              permissions = permission_package.list_read[@klass] if permission_package
+              if permissions.blank?
                 self.where!("1 != 1")
               else
                 permissions.each do |permission|
