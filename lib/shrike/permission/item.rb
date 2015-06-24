@@ -48,16 +48,22 @@ module Shrike
       end
 
       def match_constains_for_persistence(object)
+        return true if self.constrains.blank?
         self.constrains.any? do |constrain|
           matched = false
           property = constrain.property
           value = constrain.value
           if !property.nil? && !value.nil?
-            if object.persisted?
-              changes = object.changes[property]
-              matched = true if changes && changes.first == value
+            if constrain.relation.nil?
+              if object.persisted?
+                changes = object.changes[property]
+                matched = true if changes && changes.first == value
+              else
+                matched = true if object[property] == value
+              end
             else
-              matched = true if object[property] == value
+              relation_object = object.send(constrain.relation)
+              matched = true if relation_object && relation_object[property] == value
             end
           end
           matched

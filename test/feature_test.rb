@@ -89,8 +89,11 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_update_constrains_with_join
     Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+      Item.new(Clazz, READ),
       Item.new(User, READ),
-      Item.new(User, UPDATE, false, SimpleConstrain.new("name", "Tom"))))
+      Item.new(User, UPDATE, false, SimpleConstrain.new("name", "Tom")),
+      Item.new(User, UPDATE, false, SimpleConstrain.new("name", "Grade 1", relation: 'clazz')),
+      Item.new(User, UPDATE)))
     user = User.find 1
     assert_raise(PermissionError) {
       user.name = "Test"

@@ -41,6 +41,7 @@ module Shrike
                     raise PermissionError.new("Permissions Empty")
                   else
                     passed = false
+                    p permissions
                     permissions.each do |permission|
                       if permission.match_constains_for_persistence(self)
                         passed = true if permission.is_allowed
