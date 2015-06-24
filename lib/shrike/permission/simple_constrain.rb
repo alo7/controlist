@@ -1,8 +1,6 @@
-class SimpleConstrain
+class SimpleConstrain < Constrain
 
-  attr_accessor :property, :value, :relation, :table_name, :type, :operator, :clause
-
-  def initialize(property, value = nil, hash={})
+  def initialize(property, value, hash={})
     self.property = property.to_s
     self.value = value
     self.relation = hash[:relation]

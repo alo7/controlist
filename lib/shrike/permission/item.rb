@@ -2,9 +2,12 @@ module Shrike
   module Permission
     class Item
 
-      attr_accessor :klass, :operations, :is_allowed, :constrains, :clause, :joins, :checked_properties
+
       ##
-      # constrain includes :property, :value, :operator(default =), :relation, :clause
+      # constrain is SimpleConstrain or AdvancedConstrain
+      # for read, is_allowed is used in clause
+      # for persistence, is_allowed is used in property checking
+      attr_accessor :klass, :operations, :is_allowed, :constrains, :clause, :joins, :properties
 
       def initialize(klass, operations, is_allowed = true, constrains=nil)
         self.klass = klass
@@ -30,30 +33,34 @@ module Shrike
         end
       end
 
-      def handle_for_read(relation)
-        if self.clause
-          if self.joins.size > 0
-            relation.joins!(*self.joins) 
-          end
-          relation.where!("#{self.clause}")
+      def apply(*properties)
+        self.properties = properties
+        unless self.properties.blank?
+          self.properties << klass.primary_key
         end
+        self
       end
 
-      def check_for_persistence(object)
-        self.constrains.each do |constrain|
-          is_valid = true
-          check_value = !constrain.value.nil?
+      def handle_for_read(relation)
+        relation._select!(*self.properties) unless self.properties.blank?
+        relation.joins!(*self.joins) if self.joins.size > 0
+        relation.where!("#{self.clause}") if self.clause
+      end
+
+      def match_constains_for_persistence(object)
+        self.constrains.any? do |constrain|
+          matched = false
           property = constrain.property
-          changed = object.changed
-          if !self.is_allowed
-            if check_value
-              change = object.changes[property]
-              is_valid = false if change && change.first == constrain.value
+          value = constrain.value
+          if !property.nil? && !value.nil?
+            if object.persisted?
+              changes = object.changes[property]
+              matched = true if changes && changes.first == value
             else
-              is_valid = false if changed.include? property
+              matched = true if object[property] == value
             end
           end
-          raise PermissionError.new("Forbidden due to #{constrain.inspect}") unless is_valid
+          matched
         end
       end
 
@@ -64,10 +71,10 @@ module Shrike
           self.constrains = []
           return
         else
-          if !(constrains.is_a?(Hash) ||constrains.is_a?(Array))
+          if !(constrains.is_a?(Constrain) ||constrains.is_a?(Array))
             raise ArgumentError.new("constrains has unknown type #{constrains.class}")
           end
-          constrains = [constrains] if constrains.is_a? Hash
+          constrains = [constrains] if constrains.is_a? Constrain
           constrains.each do |constrain|
             raise "Persistence checking only for SimpleConstrain, but got #{constrain}" if !constrain.instance_of?(SimpleConstrain)
           end
@@ -80,8 +87,8 @@ module Shrike
         case constrains
         when String
           self.clause = constrains
-        when Array, Hash
-          constrains = [constrains] if constrains.is_a? Hash
+        when Array, Constrain
+          constrains = [constrains] if constrains.is_a? Constrain
           self.constrains = constrains
           self.clause = build_clause
           self.clause = "not (#{self.clause})" if self.is_allowed == false

@@ -17,6 +17,7 @@ require 'sqlite3'
 
 # require shrike
 require 'shrike'
+require 'shrike/default_permission_provider'
 require 'models/user'
 require 'models/clazz'
 require 'migrate'
@@ -38,18 +39,4 @@ end
 
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
-class PermissionProvider
-
-  class << self
-    def get_permission_package
-      Thread.current[:permission_package]
-    end
-
-    def set_permission_package(package)
-      Thread.current[:permission_package] = package
-    end
-  end
-
-end
-
-Shrike.initialize PermissionProvider
+Shrike.initialize Shrike::DefaultPermissionProvider

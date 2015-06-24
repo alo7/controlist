@@ -15,4 +15,10 @@ module Shrike
     @permission_provider
   end
 
+  def self.skip
+    @permission_provider.open_skip
+    yield
+    @permission_provider.close_skip
+  end
+
 end

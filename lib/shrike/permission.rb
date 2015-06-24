@@ -8,6 +8,7 @@ module Shrike
 
   end
 end
+require 'shrike/permission/constrain'
 require 'shrike/permission/simple_constrain'
 require 'shrike/permission/advanced_constrain'
 require 'shrike/permission/item'
