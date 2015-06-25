@@ -135,6 +135,7 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_persistence_apply_properties
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
+      Item.new(User, READ),
       Item.new(User, UPDATE, true, SimpleConstrain.new("name", "Tom")).apply(name: "Test"),
     ))
 

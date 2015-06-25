@@ -65,6 +65,15 @@ module Shrike
       end
 
       def hook_read
+        ActiveRecord::Core::ClassMethods.module_eval do
+          #Bypass find_by_statement_cache, otherwise will use cached sql which may has wrong permissions
+          def find(*args)
+            super
+          end
+          def find_by(*args)
+            super
+          end
+        end
         ActiveRecord::Relation.class_eval do
           def build_arel_with_shrike
             permission_provider = Shrike.permission_provider
