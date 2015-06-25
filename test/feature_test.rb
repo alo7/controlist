@@ -4,9 +4,6 @@ include Shrike::Permission
 
 class FeatureTest < ActiveSupport::TestCase
 
-  def setup
-  end
-
   def test_read_constrains_with_join
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ, true, [
@@ -23,7 +20,7 @@ class FeatureTest < ActiveSupport::TestCase
       relation.where_values
   end
 
-  def test_read_empty_with_permissions
+  def test_permission_empty
     Shrike.permission_provider.set_permission_package(nil)
     relation = User.all
     relation.to_sql
@@ -37,17 +34,6 @@ class FeatureTest < ActiveSupport::TestCase
     relation = User.all
     relation.to_sql
     assert_equal ["age != 100"], relation.where_values
-  end
-
-  def test_read_constrains_sql_only
-    Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ, true, "age != 100")
-    ))
-    Shrike.skip do
-      relation = User.all
-      relation.to_sql
-      assert_equal [], relation.where_values
-    end
   end
 
 
@@ -68,14 +54,6 @@ class FeatureTest < ActiveSupport::TestCase
     assert_not_nil relation.first._value_object.clazz_id
     assert_not_nil relation.first._val(:clazz_id)
     assert_not_nil relation.first.clazz_id
-  end
-
-  def test_read_constrains_error
-    assert_raise(ArgumentError) {
-      Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-        Item.new(User, READ, true, Object.new)
-      ))
-    }
   end
 
   def test_update_fail_without_permissions
@@ -185,6 +163,25 @@ class FeatureTest < ActiveSupport::TestCase
 
     package.add_permissions Item.new(User, READ)
     assert_instance_of User, User.find(1)
+  end
+
+  def test_constrains_argument_error
+    assert_raise(ArgumentError) {
+      Shrike.permission_provider.set_permission_package(OrderedPackage.new(
+        Item.new(User, READ, true, Object.new)
+      ))
+    }
+  end
+
+  def test_skip
+    Shrike.permission_provider.set_permission_package(OrderedPackage.new(
+      Item.new(User, READ, true, "age != 100")
+    ))
+    Shrike.skip do
+      relation = User.all
+      relation.to_sql
+      assert_equal [], relation.where_values
+    end
   end
 
 end
