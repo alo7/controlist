@@ -8,7 +8,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_read_constrains_with_join
-    Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+    Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ, true, [
         SimpleConstrain.new("name", "Tom"),
         SimpleConstrain.new("name", "Grade 1", relation: "clazz"),
@@ -31,7 +31,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_read_constrains_sql_only
-    Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+    Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ, true, "age != 100")
     ))
     relation = User.all
@@ -40,7 +40,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_read_constrains_sql_only
-    Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+    Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ, true, "age != 100")
     ))
     Shrike.skip do
@@ -52,16 +52,18 @@ class FeatureTest < ActiveSupport::TestCase
 
 
   def test_read_apply_properties
-    Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+    Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ).apply(:name)
     ))
+
     relation = User.all
     assert_nil relation.first._value_object.clazz_id
     assert_nil relation.first._val(:clazz_id)
     assert_raise(ActiveModel::MissingAttributeError) { assert_nil relation.first.clazz_id }
-    Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+    Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ)
     ))
+
     relation = User.all
     assert_not_nil relation.first._value_object.clazz_id
     assert_not_nil relation.first._val(:clazz_id)
@@ -70,14 +72,14 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_read_constrains_error
     assert_raise(ArgumentError) {
-      Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+      Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
         Item.new(User, READ, true, Object.new)
       ))
     }
   end
 
   def test_update_fail_without_permissions
-    Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+    Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ)
     ))
     user = User.find 1
@@ -87,22 +89,42 @@ class FeatureTest < ActiveSupport::TestCase
     }
   end
 
-  def test_update_constrains_with_join
-    Shrike::DefaultPermissionProvider.set_permission_package(Package.new(
+  def test_persistence_constrains
+    Shrike::DefaultPermissionProvider.set_permission_package(OrderedPackage.new(
       Item.new(Clazz, READ),
       Item.new(User, READ),
       Item.new(User, UPDATE, false, SimpleConstrain.new("name", "Tom")),
       Item.new(User, UPDATE, false, SimpleConstrain.new("name", "Grade 1", relation: 'clazz')),
       Item.new(User, UPDATE)))
-    user = User.find 1
+
+    user = User.find 3
+    assert_not_equal "Tom", user.name
+    assert_not_equal "Grade 1", user.clazz.name
+    user.name = 'Test'
+    assert_equal true, user.save
+
     assert_raise(PermissionError) {
+      user = User.find 1
+      assert_equal "Tom", user.name
       user.name = "Test"
       user.save
     }
-    user = User.find 2
+    
     assert_raise(PermissionError) {
+      user = User.find 2
+      assert_equal "Grade 1", user.clazz.name
       user.name = "Test"
       user.save
+    }
+
+    assert_raise(PermissionError) {
+      user = User.find 2
+      user.delete
+    }
+
+    assert_raise(PermissionError) {
+      user = User.find 1
+      user.destroy
     }
   end
 

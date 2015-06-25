@@ -1,7 +1,7 @@
 module Shrike
   module Permission
 
-    class Package
+    class OrderedPackage
 
       attr_reader :list_create, :list_read, :list_update, :list_delete
 

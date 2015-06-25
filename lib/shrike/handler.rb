@@ -13,15 +13,15 @@ module Shrike
 
       # Avoid ActiveModel::MissingAttributeError due to select(attributes) according to constrains
       def hook_attribute
-        ActiveRecord::Persistence.class_eval do
-          def _val(attr)
-            self._value_object[attr]
+        ActiveRecord::Persistence.class_eval %Q{
+          def #{Shrike.attribute_proxy}(attr)
+            self.#{Shrike.value_object_proxy}[attr]
           end
 
-          def _value_object
-            @_value_object ||= ValueObject.build_for self
+          def #{Shrike.value_object_proxy}
+            @#{Shrike.value_object_proxy} ||= ValueObject.build_for self
           end
-        end
+        }
       end
 
       def hook_persistence
@@ -41,7 +41,6 @@ module Shrike
                     raise PermissionError.new("Permissions Empty")
                   else
                     passed = false
-                    p permissions
                     permissions.each do |permission|
                       if permission.match_constains_for_persistence(self)
                         passed = true if permission.is_allowed

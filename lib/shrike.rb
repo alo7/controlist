@@ -5,20 +5,22 @@ require "shrike/handler"
 
 module Shrike
 
+  class << self
 
-  def self.initialize(permission_provider)
-    @permission_provider = permission_provider
-    Handler.handle
-  end
+    attr_accessor :permission_provider, :attribute_proxy, :value_object_proxy
 
-  def self.permission_provider
-    @permission_provider
-  end
+    def initialize(permission_provider, config={})
+      @permission_provider = permission_provider
+      @attribute_proxy = config[:attribute_proxy] || "_val"
+      @value_object_proxy = config[:value_object_proxy] || "_value_object"
+      Handler.handle
+    end
 
-  def self.skip
-    @permission_provider.open_skip
-    yield
-    @permission_provider.close_skip
+    def skip
+      @permission_provider.open_skip
+      yield
+      @permission_provider.close_skip
+    end
   end
 
 end
