@@ -136,7 +136,7 @@ class FeatureTest < ActiveSupport::TestCase
   def test_persistence_apply_properties
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
       Item.new(User, READ),
-      Item.new(User, UPDATE, true, SimpleConstrain.new("name", "Tom")).apply(name: "Test"),
+      Item.new(User, UPDATE, true, SimpleConstrain.new("name", "Tom")).apply(name: "Test", clazz_id: [1, 2]),
     ))
 
     assert_raise(PermissionError) {
@@ -155,8 +155,18 @@ class FeatureTest < ActiveSupport::TestCase
 
     user = User.find 1
     assert_equal "Tom", user.name
+    user.clazz_id = 2
+    assert_equal true, user.save
+    assert_raise(PermissionError) {
+      user.clazz_id = 3
+      user.save
+    }
+
+    user = User.find 1
+    assert_equal "Tom", user.name
     user.name = "Test"
     assert_equal true, user.save
+
 
   end
 

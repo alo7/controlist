@@ -37,22 +37,29 @@ module Shrike
                 unless permission_provider.skip?
                   permission_package = permission_provider.get_permission_package
                   permissions = permission_package.list_#{operation}[self.class] if permission_package
+                  error_no_permissions = "Need privileges"
                   if permissions.blank?
-                    raise PermissionError.new("Permissions Empty")
+                    raise PermissionError, error_no_permissions
                   else
                     passed = false
+                    matched_permission = nil
                     permissions.each do |permission|
                       if permission.match_for_persistence(self, Shrike::Permission::#{operation.upcase})
-                        Shrike.logger.debug "Shrike matched to \#{permission.is_allowed ? 'allow' : 'forbid'} \#{permission.inspect}"
-                        passed = true if permission.is_allowed
+                        Shrike.logger.debug{"Shrike matched to \#{permission.is_allowed ? 'allow' : 'forbid'} \#{permission.inspect}"}
+                        if permission.is_allowed
+                          passed = true
+                        end
+                        matched_permission = permission
                         break
                       end
                     end
                     if passed
-                      Shrike.logger.debug "Shrike #{operation} checked: PASSED"
+                      Shrike.logger.debug{"Shrike #{operation} checked: PASSED"}
                     else
-                      Shrike.logger.debug "Shrike #{operation} checked: FORBIDDEN"
-                      raise PermissionError.new("Forbidden") 
+                      Shrike.logger.debug{"Shrike #{operation} checked: FORBIDDEN"}
+                      error_message = matched_permission.nil? ? error_no_permissions :
+                        "Forbidden by permission: \#{matched_permission.inspect}"
+                      raise PermissionError, error_message
                     end
                   end
                 end

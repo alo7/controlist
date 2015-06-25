@@ -52,7 +52,7 @@ module Shrike
 
       def match_for_persistence(object, operation)
         properties_matched = match_properties_for_persistence object, operation
-        properties_matched && match_constains_for_persistence(object)
+        properties_matched && match_constains_for_persistence(object, operation)
       end
 
       def match_properties_for_persistence(object, operation)
@@ -61,16 +61,17 @@ module Shrike
         changes = object.changes
         self.properties.each do |property, value|
           change = changes[property]
-          if change && (value.nil? || value == change.last)
+          if change && (value.nil? || Array(value).include?(change.last))
             properties_matched = true
             break
           end
         end
+        Shrike.logger.debug{"Shrike #{operation} properties checked: #{properties_matched}"}
         properties_matched
       end
 
       # Only SimpleConstrains accepted from init_for_persistence
-      def match_constains_for_persistence(object)
+      def match_constains_for_persistence(object, operation)
         if self.constrains.blank?
           constrain_matched = true
         else
@@ -79,19 +80,19 @@ module Shrike
             property = constrain.property
             value = constrain.value
             if constrain.relation.nil?
-              if object.persisted?
-                changes = object.changes[property]
-                inner_matched = true if changes && changes.first == value
+              if object.persisted? && (changes = object.changes[property])
+                inner_matched = changes.first == value
               else
-                inner_matched = true if object[property] == value
+                inner_matched = object[property] == value
               end
             else
               relation_object = object.send(constrain.relation)
-              inner_matched = true if relation_object && relation_object[property] == value
+              inner_matched = (relation_object && relation_object[property] == value)
             end
             inner_matched
           end
         end
+        Shrike.logger.debug{"Shrike #{operation} constrains checked: #{constrain_matched}"}
         constrain_matched
       end
 
