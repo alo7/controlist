@@ -10,6 +10,10 @@ module Shrike
         @list_read = {}
         @list_update = {}
         @list_delete = {}
+        add_permissions *permissions
+      end
+
+      def add_permissions(*permissions)
         permissions.select{|permission| permission.operations.nil? || permission.operations.include?(CREATE)}
                    .each{|permission| add_list_create permission}
         permissions.select{|permission| permission.operations.nil? || permission.operations.include?(READ)}

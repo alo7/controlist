@@ -5,8 +5,7 @@ module Shrike
 
       ##
       # constrain is SimpleConstrain or AdvancedConstrain
-      # for read, is_allowed is used in clause
-      # for persistence, is_allowed is used in property checking
+      # properties is hash with property and value pairs, operation READ only need keys
       attr_accessor :klass, :operations, :is_allowed, :constrains, :clause, :joins, :properties
 
       def initialize(klass, operations, is_allowed = true, constrains=nil)
@@ -34,40 +33,66 @@ module Shrike
       end
 
       def apply(*properties)
-        self.properties = properties
-        unless self.properties.blank?
-          self.properties << klass.primary_key
+        self.properties = {id: nil}
+        properties.each do |property_pair|
+          if property_pair.is_a? Hash
+            self.properties.merge! property_pair
+          else
+            self.properties[property_pair] = nil
+          end
         end
         self
       end
 
       def handle_for_read(relation)
-        relation._select!(*self.properties) unless self.properties.blank?
+        relation._select!(*self.properties.keys) unless self.properties.blank?
         relation.joins!(*self.joins) if self.joins.size > 0
         relation.where!("#{self.clause}") if self.clause
       end
 
+      def match_for_persistence(object, operation)
+        properties_matched = match_properties_for_persistence object, operation
+        properties_matched && match_constains_for_persistence(object)
+      end
+
+      def match_properties_for_persistence(object, operation)
+        return true if operation == DELETE || self.properties.blank?
+        properties_matched = false
+        changes = object.changes
+        self.properties.each do |property, value|
+          change = changes[property]
+          if change && (value.nil? || value == change.last)
+            properties_matched = true
+            break
+          end
+        end
+        properties_matched
+      end
+
+      # Only SimpleConstrains accepted from init_for_persistence
       def match_constains_for_persistence(object)
-        return true if self.constrains.blank?
-        self.constrains.any? do |constrain|
-          matched = false
-          property = constrain.property
-          value = constrain.value
-          if !property.nil? && !value.nil?
+        if self.constrains.blank?
+          constrain_matched = true
+        else
+          constrain_matched = self.constrains.any? do |constrain|
+            inner_matched = false
+            property = constrain.property
+            value = constrain.value
             if constrain.relation.nil?
               if object.persisted?
                 changes = object.changes[property]
-                matched = true if changes && changes.first == value
+                inner_matched = true if changes && changes.first == value
               else
-                matched = true if object[property] == value
+                inner_matched = true if object[property] == value
               end
             else
               relation_object = object.send(constrain.relation)
-              matched = true if relation_object && relation_object[property] == value
+              inner_matched = true if relation_object && relation_object[property] == value
             end
+            inner_matched
           end
-          matched
         end
+        constrain_matched
       end
 
       private

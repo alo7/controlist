@@ -16,8 +16,6 @@ Minitest::Reporters.use!
 require 'sqlite3'
 
 # require shrike
-require 'shrike'
-require 'shrike/default_permission_provider'
 require 'models/user'
 require 'models/clazz'
 require 'migrate'
@@ -39,4 +37,7 @@ end
 
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
+require 'shrike'
+require 'shrike/default_permission_provider'
+#Shrike.initialize Shrike::DefaultPermissionProvider, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
 Shrike.initialize Shrike::DefaultPermissionProvider

@@ -26,28 +26,34 @@ module Shrike
 
       def hook_persistence
         {
-          list_create: :_create_record,
-          list_update: :_update_record,
-          list_delete: [:delete, :destroy]
-        }.each do |package_list, methods|
+          create: :_create_record,
+          update: :_update_record,
+          delete: [:delete, :destroy]
+        }.each do |operation, methods|
           Array(methods).each do |method|
             ActiveRecord::Persistence.module_eval %Q{
               def #{method}_with_shrike(*args)
                 permission_provider = Shrike.permission_provider
                 unless permission_provider.skip?
                   permission_package = permission_provider.get_permission_package
-                  permissions = permission_package.#{package_list}[self.class] if permission_package
+                  permissions = permission_package.list_#{operation}[self.class] if permission_package
                   if permissions.blank?
                     raise PermissionError.new("Permissions Empty")
                   else
                     passed = false
                     permissions.each do |permission|
-                      if permission.match_constains_for_persistence(self)
+                      if permission.match_for_persistence(self, Shrike::Permission::#{operation.upcase})
+                        Shrike.logger.debug "Shrike matched to \#{permission.is_allowed ? 'allow' : 'forbid'} \#{permission.inspect}"
                         passed = true if permission.is_allowed
                         break
                       end
                     end
-                    raise PermissionError.new("Forbidden") unless passed
+                    if passed
+                      Shrike.logger.debug "Shrike #{operation} checked: PASSED"
+                    else
+                      Shrike.logger.debug "Shrike #{operation} checked: FORBIDDEN"
+                      raise PermissionError.new("Forbidden") 
+                    end
                   end
                 end
                 #{method}_without_shrike(*args)
