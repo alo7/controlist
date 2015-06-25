@@ -3,41 +3,50 @@ module Shrike
 
     class OrderedPackage
 
-      attr_reader :list_create, :list_read, :list_update, :list_delete
+      attr_reader :list_create, :list_read, :list_update, :list_delete, :permissions
 
       def initialize(*permissions)
         @list_create = {}
         @list_read = {}
         @list_update = {}
         @list_delete = {}
+        @permissions = permissions
+        @permissions.freeze # avoid bypassing add_permissions/remove_permissions
         add_permissions *permissions
       end
 
       def add_permissions(*permissions)
-        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(CREATE)}
-                   .each{|permission| add_list_create permission}
-        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(READ)}
-                   .each{|permission| add_list_read permission}
-        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(UPDATE)}
-                   .each{|permission| add_list_update permission}
-        permissions.select{|permission| permission.operations.nil? || permission.operations.include?(DELETE)}
-                   .each{|permission| add_list_delete permission}
+        @permissions += permissions
+        @permissions.freeze
+        permissions.each do |permission|
+          operations = permission.operations
+          add @list_create, permission if operations.nil? || operations.include?(CREATE)
+          add @list_read, permission if operations.nil? ||  operations.include?(READ)
+          add @list_update, permission if operations.nil? ||  operations.include?(UPDATE)
+          add @list_delete, permission if operations.nil? ||  operations.include?(DELETE)
+        end
       end
 
-      def add_list_create(permission)
-        (@list_create[permission.klass] ||= []) << permission
+      def remove_permissions(*permissions)
+        @permissions -= permissions
+        @permissions.freeze
+        permissions.each do |permission|
+          operations = permission.operations
+          remove @list_create, permission if operations.nil? || operations.include?(CREATE)
+          remove @list_read, permission if operations.nil? ||  operations.include?(READ)
+          remove @list_update, permission if operations.nil? ||  operations.include?(UPDATE)
+          remove @list_delete, permission if operations.nil? ||  operations.include?(DELETE)
+        end
       end
 
-      def add_list_read(permission)
-        (@list_read[permission.klass] ||= []) << permission
+      private
+
+      def add(list, permission)
+        (list[permission.klass] ||= []) << permission
       end
 
-      def add_list_update(permission)
-        (@list_update[permission.klass] ||= []) << permission
-      end
-
-      def add_list_delete(permission)
-        (@list_delete[permission.klass] ||= []) << permission
+      def remove(list, permission)
+        (list[permission.klass] ||= []).delete permission
       end
 
     end

@@ -167,7 +167,24 @@ class FeatureTest < ActiveSupport::TestCase
     user.name = "Test"
     assert_equal true, user.save
 
+  end
 
+  def test_modify_permissions_on_the_fly
+    Shrike.permission_provider.set_permission_package(OrderedPackage.new(
+      Item.new(User, READ),
+    ))
+
+    assert_instance_of User, User.find(1)
+
+    package = Shrike.permission_provider.get_permission_package
+    package.remove_permissions package.permissions.last
+
+    assert_raise(ActiveRecord::RecordNotFound) {
+      User.find 1
+    }
+
+    package.add_permissions Item.new(User, READ)
+    assert_instance_of User, User.find(1)
   end
 
 end
