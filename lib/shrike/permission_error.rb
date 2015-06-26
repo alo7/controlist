@@ -1,2 +1,0 @@
-class PermissionError < Exception
-end

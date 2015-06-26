@@ -1,12 +1,12 @@
 require 'test_helper'
 
-include Shrike::Permission
+include Shrike::Permissions
 
 class FeatureTest < ActiveSupport::TestCase
 
   def test_read_constrains_with_join
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ, true, [
+      Shrike::Permission.new(User, READ, true, [
         SimpleConstrain.new("name", "Tom"),
         SimpleConstrain.new("name", "Grade 1", relation: "clazz"),
         AdvancedConstrain.new(property: "age", value: "5", type: Integer, operator: ">="),
@@ -29,7 +29,7 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_read_constrains_sql_only
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ, true, "age != 100")
+      Shrike::Permission.new(User, READ, true, "age != 100")
     ))
     relation = User.all
     relation.to_sql
@@ -39,7 +39,7 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_read_apply_properties
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ).apply(:name)
+      Shrike::Permission.new(User, READ).apply(:name)
     ))
 
     relation = User.all
@@ -47,7 +47,7 @@ class FeatureTest < ActiveSupport::TestCase
     assert_nil relation.first._val(:clazz_id)
     assert_raise(ActiveModel::MissingAttributeError) { assert_nil relation.first.clazz_id }
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ)
+      Shrike::Permission.new(User, READ)
     ))
 
     relation = User.all
@@ -58,10 +58,10 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_update_fail_without_permissions
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ)
+      Shrike::Permission.new(User, READ)
     ))
     user = User.find 1
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::NoPermissionError) {
       user.name = "Test"
       user.save
     }
@@ -69,11 +69,11 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_persistence_constrains
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(Clazz, READ),
-      Item.new(User, READ),
-      Item.new(User, UPDATE, false, SimpleConstrain.new("name", "Tom")),
-      Item.new(User, [UPDATE, DELETE], false, SimpleConstrain.new("name", "Grade 1", relation: 'clazz')),
-      Item.new(User, UPDATE)
+      Shrike::Permission.new(Clazz, READ),
+      Shrike::Permission.new(User, READ),
+      Shrike::Permission.new(User, UPDATE, false, SimpleConstrain.new("name", "Tom")),
+      Shrike::Permission.new(User, [UPDATE, DELETE], false, SimpleConstrain.new("name", "Grade 1", relation: 'clazz')),
+      Shrike::Permission.new(User, UPDATE)
     ))
 
     user = User.find 3
@@ -82,28 +82,28 @@ class FeatureTest < ActiveSupport::TestCase
     user.name = 'Test'
     assert_equal true, user.save
 
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::NoPermissionError) {
       user.destroy
     }
 
-    Shrike.permission_provider.get_permission_package.add_permissions(Item.new(User, DELETE))
+    Shrike.permission_provider.get_permission_package.add_permissions(Shrike::Permission.new(User, DELETE))
     assert_instance_of User, user.destroy
 
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::PermissionForbidden) {
       user = User.find 1
       assert_equal "Tom", user.name
       user.name = "Test"
       user.save
     }
 
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::PermissionForbidden) {
       user = User.find 2
       assert_equal "Grade 1", user.clazz.name
       user.name = "Test"
       user.save
     }
 
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::PermissionForbidden) {
       user = User.find 2
       assert_equal "Grade 1", user.clazz.name
       user.delete
@@ -113,18 +113,18 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_persistence_apply_properties
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ),
-      Item.new(User, UPDATE, true, SimpleConstrain.new("name", "Tom")).apply(name: "Test", clazz_id: [1, 2]),
+      Shrike::Permission.new(User, READ),
+      Shrike::Permission.new(User, UPDATE, true, SimpleConstrain.new("name", "Tom")).apply(name: "Test", clazz_id: [1, 2]),
     ))
 
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::NoPermissionError) {
       user = User.find 2
       assert_not_equal "Tom", user.name
       user.name = "Test"
       user.save
     }
 
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::NoPermissionError) {
       user = User.find 1
       assert_equal "Tom", user.name
       user.name = "Jerry"
@@ -135,7 +135,7 @@ class FeatureTest < ActiveSupport::TestCase
     assert_equal "Tom", user.name
     user.clazz_id = 2
     assert_equal true, user.save
-    assert_raise(PermissionError) {
+    assert_raise(Shrike::NoPermissionError) {
       user.clazz_id = 3
       user.save
     }
@@ -149,7 +149,7 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_modify_permissions_on_the_fly
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ),
+      Shrike::Permission.new(User, READ),
     ))
 
     assert_instance_of User, User.find(1)
@@ -161,21 +161,21 @@ class FeatureTest < ActiveSupport::TestCase
       User.find 1
     }
 
-    package.add_permissions Item.new(User, READ)
+    package.add_permissions Shrike::Permission.new(User, READ)
     assert_instance_of User, User.find(1)
   end
 
   def test_constrains_argument_error
     assert_raise(ArgumentError) {
       Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-        Item.new(User, READ, true, Object.new)
+        Shrike::Permission.new(User, READ, true, Object.new)
       ))
     }
   end
 
   def test_skip
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-      Item.new(User, READ, true, "age != 100")
+      Shrike::Permission.new(User, READ, true, "age != 100")
     ))
     Shrike.skip do
       relation = User.all

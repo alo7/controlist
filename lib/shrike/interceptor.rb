@@ -1,17 +1,31 @@
-require 'shrike/value_object'
 module Shrike
 
-  class Handler
+  class Interceptor
+
+    PROXY_CLASSES = {}
 
     class << self
 
-      def handle
+      def hook
         hook_read
         hook_persistence
         hook_attribute
       end
 
+      # used by hook_attribute
+      def build_proxy(target)
+        klass = target.class
+        proxy_class = (PROXY_CLASSES[klass] ||= create_value_object_proxy_class klass)
+        proxy_class.new target
+      end
+
+      private
+
       # Avoid ActiveModel::MissingAttributeError due to select(attributes) according to constrains
+      #   #suppose attribute_proxy is :_val, value_object_proxy is :_value_object
+      #   user = User.find 1
+      #   user._val(:name)
+      #   user._value_object.name
       def hook_attribute
         ActiveRecord::Persistence.class_eval %Q{
           def #{Shrike.attribute_proxy}(attr)
@@ -19,7 +33,7 @@ module Shrike
           end
 
           def #{Shrike.value_object_proxy}
-            @#{Shrike.value_object_proxy} ||= ValueObject.build_for self
+            @#{Shrike.value_object_proxy} ||= Shrike::Interceptor.build_proxy self
           end
         }
       end
@@ -37,9 +51,8 @@ module Shrike
                 unless permission_provider.skip?
                   permission_package = permission_provider.get_permission_package
                   permissions = permission_package.list_#{operation}[self.class] if permission_package
-                  error_no_permissions = "Need privileges"
                   if permissions.blank?
-                    raise PermissionError, error_no_permissions
+                    raise NoPermissionError
                   else
                     passed = false
                     matched_permission = nil
@@ -57,9 +70,11 @@ module Shrike
                       Shrike.logger.debug{"Shrike #{operation} checked: PASSED"}
                     else
                       Shrike.logger.debug{"Shrike #{operation} checked: FORBIDDEN"}
-                      error_message = matched_permission.nil? ? error_no_permissions :
-                        "Forbidden by permission: \#{matched_permission.inspect}"
-                      raise PermissionError, error_message
+                      if matched_permission.nil?
+                        raise NoPermissionError
+                      else
+                        raise PermissionForbidden.new "Forbidden by permission", matched_permission
+                      end
                     end
                   end
                 end
@@ -99,6 +114,30 @@ module Shrike
           end
           alias_method_chain :build_arel, :shrike unless method_defined? :build_arel_without_shrike
         end
+      end
+
+      def create_value_object_proxy_class(klass)
+        attributes = klass.columns.map(&:name)
+        attributes.delete klass.primary_key
+        proxy_class = Class.new
+        code_block = ""
+        attributes.each do |attribute|
+          code_block += %Q{
+            def #{attribute}
+              @target.#{attribute} rescue nil
+            end
+          }
+        end
+        proxy_class.class_eval %Q{
+          def initialize(target)
+            @target = target
+          end
+          def [](attribute)
+            @target[attribute] rescue nil
+          end
+          #{code_block}
+        }
+        proxy_class
       end
 
     end

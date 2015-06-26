@@ -38,6 +38,6 @@ end
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 require 'shrike'
-require 'shrike/default_permission_provider'
-#Shrike.initialize Shrike::DefaultPermissionProvider, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
-Shrike.initialize Shrike::DefaultPermissionProvider
+require 'shrike/managers/thread_based_manager'
+#Shrike.initialize Shrike::Manager::ThreadBasedManager, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
+Shrike.initialize Shrike::Managers::ThreadBasedManager

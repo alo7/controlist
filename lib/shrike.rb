@@ -1,7 +1,8 @@
 require "shrike/version"
-require "shrike/permission_error"
+require "shrike/errors"
 require "shrike/permission"
-require "shrike/handler"
+require "shrike/interceptor"
+require "shrike/managers/base_manager"
 
 module Shrike
 
@@ -14,7 +15,7 @@ module Shrike
       @attribute_proxy = config[:attribute_proxy] || "_val"
       @value_object_proxy = config[:value_object_proxy] || "_value_object"
       @logger = config[:logger] || Logger.new(STDOUT)
-      Handler.handle
+      Interceptor.hook
     end
 
     def skip

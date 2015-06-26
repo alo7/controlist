@@ -1,5 +1,5 @@
 module Shrike
-  module Permission
+  module Permissions
 
     class OrderedPackage
 
