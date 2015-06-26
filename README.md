@@ -71,3 +71,8 @@ And more examples, please see test/feature_test.rb
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create a new Pull Request
+
+
+## License
+
+Shrike is released under the [MIT License](http://www.opensource.org/licenses/MIT).
