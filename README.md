@@ -40,6 +40,9 @@ Shrike.initialize YourManager, attribute_proxy: "_val", value_object_proxy: "_va
 
 * support attribute level permission
 * support association level permission
+* attribute value check support lambda and raw sql
+* persistence permistion for attribute old and new value
+* persistence permistion support Proc
 * modify permissions on the fly
 
 
@@ -49,17 +52,19 @@ Shrike.initialize YourManager, attribute_proxy: "_val", value_object_proxy: "_va
 Shrike.permission_provider.set_permission_package(OrderedPackage.new(
   Shrike::Permission.new(User, READ, true, [
     SimpleConstrain.new("name", "Tom"),
-    SimpleConstrain.new("name", "Grade 1", relation: "clazz"),
-    AdvancedConstrain.new(property: "age", value: "5", type: Integer, operator: ">="),
+    SimpleConstrain.new("name", ["Grade 1", "Grade 2"], relation: "clazz"),
+    AdvancedConstrain.new(property: "age", value: 5, operator: ">="),
     SimpleConstrain.new("age", "null"),
+    SimpleConstrain.new("age", [1,2,3]),
+    SimpleConstrain.new("clazz_id", -> { Clazz.select(:id).map(&:id) }),
     AdvancedConstrain.new(clause: "age != 100")
   ])))
 relation = User.all
 relation.to_sql
 assert_equal [:clazz], relation.joins_values
-assert_equal ["(users.name = 'Tom') and (clazzs.name = 'Grade 1') and (users.age >= 5) and (users.age is null) and (age != 100)"], relation.where_values
-
-
+assert_equal ["(users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2'))" +
+              " and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3))" +
+              " and (users.clazz_id in (1,2)) and (age != 100)"], relation.where_values
 ```
 
 And more examples, please see test/feature_test.rb

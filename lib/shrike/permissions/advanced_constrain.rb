@@ -7,9 +7,9 @@ module Shrike
 
       def initialize(hash)
         super(hash[:property], hash[:value], hash)
-        self.type = hash[:type] if hash[:type]
         self.operator = hash[:operator]
         self.clause = hash[:clause]
+        self.proc = Proc.new if block_given?
       end
 
     end

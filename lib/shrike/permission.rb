@@ -143,14 +143,27 @@ module Shrike
           table_name ||= (constrain.table_name || self.klass.table_name)
           property = constrain.property
           value = constrain.value
-          raise ArgumentError.new("property could not be nil") if property.nil?
-          raise ArgumentError.new("value could not be nil") if value.nil?
-          raise "value require string type" unless value.is_a? String
-          if value.upcase == 'NULL'
-            default_operator = 'is'
+          raise ArgumentError.new("property could not be nil") if property.blank?
+          raise ArgumentError.new("value could not be nil") if value.blank?
+          default_operator = '='
+          if value.is_a?(Proc) && value.lambda?
+            Shrike.skip{ value = value.call }
+          end
+          if value.is_a? Array
+            if value.first.is_a? String
+              value = "('" + value.join("','") + "')"
+            else
+              value = "(" + value.join(",") + ")"
+            end
+            default_operator = 'in'
           else
-            value = "'#{value}'" if constrain.type.nil? || constrain.type == String
-            default_operator = '='
+            if value.is_a? String
+              if value.upcase == 'NULL'
+                default_operator = 'is' 
+              else
+                value = "'#{value}'"
+              end
+            end
           end
           operator = constrain.operator || default_operator
           part_clause = "#{table_name}.#{property} #{operator} #{value}"
