@@ -1,15 +1,17 @@
 module Shrike
   module Permissions
 
-    class AdvancedConstrain < SimpleConstrain
-
-      attr_accessor :clause
+    class AdvancedConstrain < Constrain
 
       def initialize(hash)
-        super(hash[:property], hash[:value], hash)
+        self.property = hash[:property]
+        self.value = hash[:value]
+        self.relation = hash[:relation]
+        self.table_name = hash[:table_name]
         self.operator = hash[:operator]
         self.clause = hash[:clause]
-        self.proc = Proc.new if block_given?
+        self.proc_read = hash[:proc_read]
+        self.proc_persistence = hash[:proc_persistence]
       end
 
     end

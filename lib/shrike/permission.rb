@@ -7,12 +7,11 @@ require 'shrike/permissions/ordered_package'
 module Shrike
   class Permission
 
-    ##
-    # constrain is SimpleConstrain or AdvancedConstrain
-    # properties is hash with property and value pairs, operation READ only need keys
-    attr_accessor :klass, :operations, :is_allowed, :constrains, :clause, :joins, :properties
+    # properties is hash with property and value pair, operation READ only need keys
+    attr_accessor :klass, :operations, :is_allowed, :constrains, :clause, :joins, :properties, :procs_read
 
     def initialize(klass, operations, is_allowed = true, constrains=nil)
+      self.procs_read = []
       self.klass = klass
       unless operations.nil?
         if operations.is_a? Array
@@ -52,6 +51,14 @@ module Shrike
       relation._select!(*self.properties.keys) unless self.properties.blank?
       relation.joins!(*self.joins) if self.joins.size > 0
       relation.where!("#{self.clause}") if self.clause
+      unless self.procs_read.blank?
+        merging_relation = self.klass.unscoped
+        self.procs_read.each do |proc|
+          merging_relation = proc.call(merging_relation)
+        end
+        ActiveRecord::Relation::Merger.new(relation, merging_relation).merge
+      end
+
     end
 
     def match_for_persistence(object, operation)
@@ -74,24 +81,28 @@ module Shrike
       properties_matched
     end
 
-    # Only SimpleConstrains accepted from init_for_persistence
     def match_constains_for_persistence(object, operation)
       if self.constrains.blank?
         constrain_matched = true
       else
         constrain_matched = self.constrains.any? do |constrain|
-          inner_matched = false
-          property = constrain.property
-          value = constrain.value
-          if constrain.relation.nil?
-            if object.persisted? && (changes = object.changes[property])
-              inner_matched = changes.first == value
-            else
-              inner_matched = object[property] == value
-            end
+          if constrain.proc_persistence.is_a?(Proc) && constrain.proc_persistence.lambda?
+            inner_matched = constrain.proc_persistence.call object, operation
           else
-            relation_object = object.send(constrain.relation)
-            inner_matched = (relation_object && relation_object[property] == value)
+            inner_matched = false
+            property = constrain.property
+            value = constrain.value
+            operator = constrain.operator
+            if constrain.relation.nil?
+              if object.persisted? && (changes = object.changes[property])
+                inner_matched = match_value(changes.first, value, operator)
+              else
+                inner_matched = match_value(object[property], value, operator)
+              end
+            else
+              relation_object = object.send(constrain.relation)
+              inner_matched = (relation_object && match_value(relation_object[property], value, operator))
+            end
           end
           inner_matched
         end
@@ -112,9 +123,17 @@ module Shrike
         end
         constrains = [constrains] if constrains.is_a? Shrike::Permissions::Constrain
         constrains.each do |constrain|
-          raise "Persistence checking only for SimpleConstrain, but got #{constrain}" if !constrain.instance_of?(SimpleConstrain)
+          raise "Persistence operation can't use constrain clause" unless constrain.clause.blank?
         end
         self.constrains = constrains
+      end
+    end
+
+    def match_value(left, right, operator)
+      if operator.nil?
+        left == right
+      else
+        left.send(operator.to_sym, right)
       end
     end
 
@@ -136,40 +155,45 @@ module Shrike
     def build_clause
       clause = ""
       self.constrains.each do |constrain|
-        if constrain.is_a?(Shrike::Permissions::AdvancedConstrain) && !constrain.clause.nil?
-          part_clause = constrain.clause
+        if constrain.proc_read.is_a?(Proc)
+          self.procs_read << constrain.proc_read
+          next
         else
-          table_name = append_joins constrain.relation if constrain.relation
-          table_name ||= (constrain.table_name || self.klass.table_name)
-          property = constrain.property
-          value = constrain.value
-          raise ArgumentError.new("property could not be nil") if property.blank?
-          raise ArgumentError.new("value could not be nil") if value.blank?
-          default_operator = '='
-          if value.is_a?(Proc) && value.lambda?
-            Shrike.skip{ value = value.call }
-          end
-          if value.is_a? Array
-            if value.first.is_a? String
-              value = "('" + value.join("','") + "')"
-            else
-              value = "(" + value.join(",") + ")"
-            end
-            default_operator = 'in'
+          if !constrain.clause.nil?
+            part_clause = constrain.clause
           else
-            if value.is_a? String
-              if value.upcase == 'NULL'
-                default_operator = 'is' 
+            table_name = append_joins constrain.relation if constrain.relation
+            table_name ||= (constrain.table_name || self.klass.table_name)
+            property = constrain.property
+            value = constrain.value
+            raise ArgumentError.new("property could not be nil") if property.blank?
+            raise ArgumentError.new("value could not be nil") if value.blank?
+            default_operator = '='
+            if value.is_a?(Proc) && value.lambda?
+              Shrike.skip{ value = value.call }
+            end
+            if value.is_a? Array
+              if value.first.is_a? String
+                value = "('" + value.join("','") + "')"
               else
-                value = "'#{value}'"
+                value = "(" + value.join(",") + ")"
+              end
+              default_operator = 'in'
+            else
+              if value.is_a? String
+                if value.upcase == 'NULL'
+                  default_operator = 'is' 
+                else
+                  value = "'#{value}'"
+                end
               end
             end
+            operator = constrain.operator || default_operator
+            part_clause = "#{table_name}.#{property} #{operator} #{value}"
           end
-          operator = constrain.operator || default_operator
-          part_clause = "#{table_name}.#{property} #{operator} #{value}"
+          clause += " and " if clause.length > 0
+          clause += "(#{part_clause})"
         end
-        clause += " and " if clause.length > 0
-        clause += "(#{part_clause})"
       end
       clause
     end

@@ -13,7 +13,8 @@ class FeatureTest < ActiveSupport::TestCase
         SimpleConstrain.new("age", "null"),
         SimpleConstrain.new("age", [1,2,3]),
         SimpleConstrain.new("clazz_id", -> { Clazz.select(:id).map(&:id) }),
-        AdvancedConstrain.new(clause: "age != 100")
+        AdvancedConstrain.new(clause: "age != 100"),
+        AdvancedConstrain.new(proc_read: lambda{|relation| relation.order("id DESC").limit(3) })
       ])))
     relation = User.all
     relation.to_sql
@@ -21,6 +22,8 @@ class FeatureTest < ActiveSupport::TestCase
     assert_equal ["(users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2'))" +
                   " and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3))" +
                   " and (users.clazz_id in (1,2)) and (age != 100)"], relation.where_values
+    assert_equal 3, relation.limit_value
+    assert_equal ["id DESC"], relation.order_values
   end
 
   def test_permission_empty
@@ -74,7 +77,8 @@ class FeatureTest < ActiveSupport::TestCase
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
       Shrike::Permission.new(Clazz, READ),
       Shrike::Permission.new(User, READ),
-      Shrike::Permission.new(User, UPDATE, false, SimpleConstrain.new("name", "Tom")),
+      Shrike::Permission.new(User, UPDATE, false, AdvancedConstrain.new(property: "name", value: "To", operator: "include?")),
+      Shrike::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == 'Block'})),
       Shrike::Permission.new(User, [UPDATE, DELETE], false, SimpleConstrain.new("name", "Grade 1", relation: 'clazz')),
       Shrike::Permission.new(User, UPDATE)
     ))
@@ -84,6 +88,11 @@ class FeatureTest < ActiveSupport::TestCase
     assert_not_equal "Grade 1", user.clazz.name
     user.name = 'Test'
     assert_equal true, user.save
+
+    assert_raise(Shrike::PermissionForbidden) {
+      user.name = "Block"
+      user.save
+    }
 
     assert_raise(Shrike::NoPermissionError) {
       user.destroy
