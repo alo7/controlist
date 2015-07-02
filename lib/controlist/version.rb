@@ -1,3 +1,3 @@
-module Shrike
+module Controlist
   VERSION = "0.1.0"
 end

@@ -15,19 +15,19 @@ require "minitest/reporters"
 Minitest::Reporters.use!
 require 'sqlite3'
 
-# require shrike
+# require controlist
 require 'models/user'
 require 'models/clazz'
 load "test/migrate.rb"
 
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
-require 'shrike'
-require 'shrike/managers/thread_based_manager'
-#Shrike.initialize Shrike::Manager::ThreadBasedManager, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
-Shrike.initialize Shrike::Managers::ThreadBasedManager
+require 'controlist'
+require 'controlist/managers/thread_based_manager'
+#Controlist.initialize Controlist::Manager::ThreadBasedManager, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
+Controlist.initialize Controlist::Managers::ThreadBasedManager
 
-unless Shrike.is_activerecord3?
+unless Controlist.is_activerecord3?
   class ActiveSupport::TestCase
     ActiveRecord::Migration.check_pending!
 

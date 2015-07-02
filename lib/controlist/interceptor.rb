@@ -1,4 +1,4 @@
-module Shrike
+module Controlist
 
   class Interceptor
 
@@ -28,18 +28,18 @@ module Shrike
       #   user._value_object.name
       def hook_attribute
         ActiveRecord::Persistence.class_eval %Q{
-          def #{Shrike.attribute_proxy}(attr)
-            self.#{Shrike.value_object_proxy}[attr]
+          def #{Controlist.attribute_proxy}(attr)
+            self.#{Controlist.value_object_proxy}[attr]
           end
 
-          def #{Shrike.value_object_proxy}
-            @#{Shrike.value_object_proxy} ||= Shrike::Interceptor.build_proxy self
+          def #{Controlist.value_object_proxy}
+            @#{Controlist.value_object_proxy} ||= Controlist::Interceptor.build_proxy self
           end
         }
       end
 
       def hook_persistence
-        if Shrike.is_activerecord3?
+        if Controlist.is_activerecord3?
           settings = {
             create: :create,
             update: :update,
@@ -55,8 +55,8 @@ module Shrike
         settings.each do |operation, methods|
           Array(methods).each do |method|
             ActiveRecord::Persistence.module_eval %Q{
-              def #{method}_with_shrike(*args)
-                permission_provider = Shrike.permission_provider
+              def #{method}_with_controlist(*args)
+                permission_provider = Controlist.permission_provider
                 unless permission_provider.skip?
                   permission_package = permission_provider.get_permission_package
                   permissions = permission_package.list_#{operation}[self.class] if permission_package
@@ -66,8 +66,8 @@ module Shrike
                     passed = false
                     matched_permission = nil
                     permissions.each do |permission|
-                      if permission.match_for_persistence(self, Shrike::Permission::#{operation.upcase})
-                        Shrike.logger.debug{"Shrike matched to \#{permission.is_allowed ? 'allow' : 'forbid'} \#{permission.inspect}"}
+                      if permission.match_for_persistence(self, Controlist::Permission::#{operation.upcase})
+                        Controlist.logger.debug{"Controlist matched to \#{permission.is_allowed ? 'allow' : 'forbid'} \#{permission.inspect}"}
                         if permission.is_allowed
                           passed = true
                         end
@@ -76,9 +76,9 @@ module Shrike
                       end
                     end
                     if passed
-                      Shrike.logger.debug{"Shrike #{operation} checked: PASSED"}
+                      Controlist.logger.debug{"Controlist #{operation} checked: PASSED"}
                     else
-                      Shrike.logger.debug{"Shrike #{operation} checked: FORBIDDEN"}
+                      Controlist.logger.debug{"Controlist #{operation} checked: FORBIDDEN"}
                       if matched_permission.nil?
                         raise NoPermissionError
                       else
@@ -87,16 +87,16 @@ module Shrike
                     end
                   end
                 end
-            #{method}_without_shrike(*args)
+            #{method}_without_controlist(*args)
           end
-          alias_method_chain :#{method}, :shrike unless method_defined? :#{method}_without_shrike
+          alias_method_chain :#{method}, :controlist unless method_defined? :#{method}_without_controlist
             }
         end
       end
     end
 
     def hook_read
-      if Shrike.is_activerecord3?
+      if Controlist.is_activerecord3?
         ActiveRecord::QueryMethods.module_eval do
           def where!(opts, *rest)
             return if opts.blank?
@@ -131,16 +131,16 @@ module Shrike
         end
       end
       ActiveRecord::Relation.class_eval do
-        def build_arel_with_shrike
-          permission_provider = Shrike.permission_provider
-          if permission_provider.skip? || @shrike_processing
-            build_arel_without_shrike
+        def build_arel_with_controlist
+          permission_provider = Controlist.permission_provider
+          if permission_provider.skip? || @controlist_processing
+            build_arel_without_controlist
           else
-            if @shrike_done
-              raise Shrike::NotReuseableError.new("The relation has built a sql, you can't reuse it, or you can clone it before sql building", self)
+            if @controlist_done
+              raise Controlist::NotReuseableError.new("The relation has built a sql, you can't reuse it, or you can clone it before sql building", self)
             else
-              @shrike_processing = true
-              permission_provider = Shrike.permission_provider
+              @controlist_processing = true
+              permission_provider = Controlist.permission_provider
               unless permission_provider.skip?
                 permission_package = permission_provider.get_permission_package
                 permissions = permission_package.list_read[@klass] if permission_package
@@ -152,13 +152,13 @@ module Shrike
                   end
                 end
               end
-              @shrike_processing = false
-              @shrike_done = true
-              build_arel_without_shrike
+              @controlist_processing = false
+              @controlist_done = true
+              build_arel_without_controlist
             end
           end
         end
-        alias_method_chain :build_arel, :shrike unless method_defined? :build_arel_without_shrike
+        alias_method_chain :build_arel, :controlist unless method_defined? :build_arel_without_controlist
       end
     end
 

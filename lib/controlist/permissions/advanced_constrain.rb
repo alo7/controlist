@@ -1,4 +1,4 @@
-module Shrike
+module Controlist
   module Permissions
 
     class AdvancedConstrain < Constrain
@@ -10,7 +10,7 @@ module Shrike
         self.table_name = hash[:table_name]
         self.operator = hash[:operator]
         self.clause = hash[:clause]
-        if Shrike.is_activerecord3? && (hash.has_key?(:proc_read) || hash.has_key?(:proc_persistence))
+        if Controlist.is_activerecord3? && (hash.has_key?(:proc_read) || hash.has_key?(:proc_persistence))
           raise NotImplementedError, "Skip proc_read and proc_persistence, that features only be supported in ActiveRecord 4 or later"
         else
           self.proc_read = hash[:proc_read]

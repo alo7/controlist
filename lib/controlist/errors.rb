@@ -1,12 +1,12 @@
-module Shrike
+module Controlist
 
-  class ShrikeError < StandardError
+  class ControlistError < StandardError
   end
 
-  class NoPermissionError < ShrikeError
+  class NoPermissionError < ControlistError
   end
 
-  class PermissionForbidden < ShrikeError
+  class PermissionForbidden < ControlistError
     attr_reader :permission
 
     def initialize(message, permission = nil)
@@ -15,7 +15,7 @@ module Shrike
     end
   end
 
-  class NotReuseableError < ShrikeError
+  class NotReuseableError < ControlistError
     attr_reader :relation
     def initialize(message, relation = nil)
       @relation = relation

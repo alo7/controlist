@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'shrike/version'
+require 'controlist/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "shrike"
-  spec.version       = Shrike::VERSION
+  spec.name          = "controlist"
+  spec.version       = Controlist::VERSION
   spec.authors       = ["Leon Li"]
   spec.email         = ["qianthinking@gmail.com"]
   spec.summary       = %q{Fine-grained access control library for Ruby ActiveRecord}

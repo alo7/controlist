@@ -1,4 +1,4 @@
-module Shrike
+module Controlist
   module Managers
     class ThreadBasedManager < BaseManager
 
@@ -13,15 +13,15 @@ module Shrike
         end
 
         def skip?
-          Thread.current[:skip_shrike] == true
+          Thread.current[:skip_controlist] == true
         end
 
         def open_skip
-          Thread.current[:skip_shrike] = true
+          Thread.current[:skip_controlist] = true
         end
 
         def close_skip
-          Thread.current[:skip_shrike] = nil
+          Thread.current[:skip_controlist] = nil
         end
 
       end

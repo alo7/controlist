@@ -1,10 +1,10 @@
-require "shrike/version"
-require "shrike/errors"
-require "shrike/permission"
-require "shrike/interceptor"
-require "shrike/managers/base_manager"
+require "controlist/version"
+require "controlist/errors"
+require "controlist/permission"
+require "controlist/interceptor"
+require "controlist/managers/base_manager"
 
-module Shrike
+module Controlist
 
   class << self
 

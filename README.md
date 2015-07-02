@@ -1,8 +1,8 @@
-# Shrike
+# Controlist
 
 ## Fine-grained access control library for Ruby ActiveRecord
 
-Shrike support Ruby 1.9 and 2.x, ActiveRecord 3.2 and 4.1+
+Controlist support Ruby 1.9 and 2.x, ActiveRecord 3.2 and 4.1+
 
 ## Use Case
 
@@ -27,7 +27,7 @@ Any scenario that need fine-grained or flexible access control
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'shrike'
+gem 'controlist'
 ```
 
 And then execute:
@@ -36,31 +36,31 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install shrike
+    $ gem install controlist
 
 ## Usage
 
 ### Initialization
 
-```
-require 'shrike'
-require 'shrike/managers/thread_based_manager'
-Shrike.initialize Shrike::Managers::ThreadBasedManager
+```ruby
+require 'controlist'
+require 'controlist/managers/thread_based_manager'
+Controlist.initialize Controlist::Managers::ThreadBasedManager
 ```
 
-You can use your customized manager or configuration to initialize Shrike
+You can use your customized manager or configuration to initialize Controlist
 
-```
-require 'shrike'
-Shrike.initialize YourManager #, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
+```ruby
+require 'controlist'
+Controlist.initialize YourManager #, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
 
 ```
 
 ## Example
 
-```
-Shrike.permission_provider.set_permission_package(OrderedPackage.new(
-  Shrike::Permission.new(User, READ, true, [
+```ruby
+Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+  Controlist::Permission.new(User, READ, true, [
     SimpleConstrain.new("name", "Tom"),
     SimpleConstrain.new("name", ["Grade 1", "Grade 2"], relation: "clazz"),
     AdvancedConstrain.new(property: "age", value: 5, operator: ">="),
@@ -80,11 +80,11 @@ assert_equal 3, relation.limit_value
 assert_equal ["id DESC"], relation.order_values
 ```
 
-And more examples, please see test/feature_test.rb
+And more examples, please see [more examples](https://github.com/alo7/controlist/blob/master/test/feature_test.rb)
 
 ## Contributing
 
-1. Fork it ( http://git.shuobaotang.com/vw/shrike.git )
+1. Fork it ( https://github.com/alo7/controlist.git )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
@@ -93,4 +93,4 @@ And more examples, please see test/feature_test.rb
 
 ## License
 
-Shrike is released under the [MIT License](http://www.opensource.org/licenses/MIT).
+Controlist is released under the [MIT License](http://www.opensource.org/licenses/MIT).

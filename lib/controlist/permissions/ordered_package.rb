@@ -1,4 +1,4 @@
-module Shrike
+module Controlist
   module Permissions
 
     class OrderedPackage

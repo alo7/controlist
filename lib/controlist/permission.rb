@@ -1,10 +1,10 @@
-require 'shrike/permissions/operation'
-require 'shrike/permissions/constrain'
-require 'shrike/permissions/simple_constrain'
-require 'shrike/permissions/advanced_constrain'
-require 'shrike/permissions/ordered_package'
+require 'controlist/permissions/operation'
+require 'controlist/permissions/constrain'
+require 'controlist/permissions/simple_constrain'
+require 'controlist/permissions/advanced_constrain'
+require 'controlist/permissions/ordered_package'
 
-module Shrike
+module Controlist
   class Permission
 
     # properties is hash with property and value pair, operation READ only need keys
@@ -26,10 +26,10 @@ module Shrike
         init_for_read constrains
         init_for_persistence constrains
       else
-        init_for_read constrains if self.operations.include? Shrike::Permissions::READ
-        if  self.operations.include?(Shrike::Permissions::CREATE) ||
-            self.operations.include?(Shrike::Permissions::UPDATE) ||
-            self.operations.include?(Shrike::Permissions::DELETE)
+        init_for_read constrains if self.operations.include? Controlist::Permissions::READ
+        if  self.operations.include?(Controlist::Permissions::CREATE) ||
+            self.operations.include?(Controlist::Permissions::UPDATE) ||
+            self.operations.include?(Controlist::Permissions::DELETE)
           init_for_persistence constrains
         end
       end
@@ -68,7 +68,7 @@ module Shrike
     end
 
     def match_properties_for_persistence(object, operation)
-      return true if operation == Shrike::Permissions::DELETE || self.properties.blank?
+      return true if operation == Controlist::Permissions::DELETE || self.properties.blank?
       properties_matched = false
       changes = object.changes
       self.properties.each do |property, value|
@@ -78,7 +78,7 @@ module Shrike
           break
         end
       end
-      Shrike.logger.debug{"Shrike #{operation} properties checked: #{properties_matched}"}
+      Controlist.logger.debug{"Controlist #{operation} properties checked: #{properties_matched}"}
       properties_matched
     end
 
@@ -108,7 +108,7 @@ module Shrike
           inner_matched
         end
       end
-      Shrike.logger.debug{"Shrike #{operation} constrains checked: #{constrain_matched}"}
+      Controlist.logger.debug{"Controlist #{operation} constrains checked: #{constrain_matched}"}
       constrain_matched
     end
 
@@ -116,10 +116,10 @@ module Shrike
 
     def init_for_persistence(constrains)
       return if constrains.nil?
-      if !(constrains.is_a?(Shrike::Permissions::Constrain) ||constrains.is_a?(Array))
+      if !(constrains.is_a?(Controlist::Permissions::Constrain) ||constrains.is_a?(Array))
         raise ArgumentError.new("constrains has unknown type #{constrains.class}")
       end
-      constrains = [constrains] if constrains.is_a? Shrike::Permissions::Constrain
+      constrains = [constrains] if constrains.is_a? Controlist::Permissions::Constrain
       constrains.compact!
       constrains.each do |constrain|
         raise "Persistence operation can't use constrain clause" unless constrain.clause.blank?
@@ -140,8 +140,8 @@ module Shrike
       case constrains
       when String
         self.clause = constrains
-      when Array, Shrike::Permissions::Constrain
-        constrains = [constrains] if constrains.is_a? Shrike::Permissions::Constrain
+      when Array, Controlist::Permissions::Constrain
+        constrains = [constrains] if constrains.is_a? Controlist::Permissions::Constrain
         self.constrains = constrains.compact
         self.clause = build_clause
         self.clause = "not (#{self.clause})" if self.is_allowed == false
@@ -168,7 +168,7 @@ module Shrike
             raise ArgumentError.new("value could not be nil") if value.blank?
             default_operator = '='
             if value.is_a?(Proc) && value.lambda?
-              Shrike.skip{ value = value.call }
+              Controlist.skip{ value = value.call }
             end
             if value.is_a? Array
               if value.first.is_a? String
