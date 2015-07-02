@@ -4,6 +4,21 @@ include Shrike::Permissions
 
 class FeatureTest < ActiveSupport::TestCase
 
+  def setup
+    if Shrike.is_activerecord3?
+      Shrike.skip do
+        load "test/migrate.rb"
+        Clazz.create id: 1, name: "Grade 1"
+        Clazz.create id: 2, name: "Grade 2"
+        User.create id: 1, name: "Tom", clazz_id: 1, age: 1
+        User.create id: 2, name: "Jerry", clazz_id: 1, age: 1
+        User.create id: 3, name: "Henry", clazz_id: 2, age: 1
+        User.create id: 4, name: "Tom", clazz_id: 2, age: 7
+        User.create id: 5, name: "MAF", clazz_id: 2, age: 1
+      end
+    end
+  end
+
   def test_read_constrains
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
       Shrike::Permission.new(User, READ, true, [
@@ -14,21 +29,24 @@ class FeatureTest < ActiveSupport::TestCase
         SimpleConstrain.new("age", [1,2,3]),
         SimpleConstrain.new("clazz_id", -> { Clazz.select(:id).map(&:id) }),
         AdvancedConstrain.new(clause: "age != 100"),
-        AdvancedConstrain.new(proc_read: lambda{|relation| relation.order("id DESC").limit(3) })
+        Shrike.is_activerecord3? ?  nil : AdvancedConstrain.new(proc_read: lambda{|relation| relation.order("id DESC").limit(3) })
       ])))
-    relation = User.all
+
+    relation = User.unscoped
     relation.to_sql
     assert_equal [:clazz], relation.joins_values
     assert_equal ["(users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2'))" +
                   " and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3))" +
                   " and (users.clazz_id in (1,2)) and (age != 100)"], relation.where_values
-    assert_equal 3, relation.limit_value
-    assert_equal ["id DESC"], relation.order_values
+    unless Shrike.is_activerecord3?
+      assert_equal 3, relation.limit_value
+      assert_equal ["id DESC"], relation.order_values
+    end
   end
 
   def test_permission_empty
     Shrike.permission_provider.set_permission_package(nil)
-    relation = User.all
+    relation = User.unscoped
     relation.to_sql
     assert_equal ["1 != 1"], relation.where_values
   end
@@ -37,7 +55,7 @@ class FeatureTest < ActiveSupport::TestCase
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
       Shrike::Permission.new(User, READ, true, "age != 100")
     ))
-    relation = User.all
+    relation = User.unscoped
     relation.to_sql
     assert_equal ["age != 100"], relation.where_values
   end
@@ -48,7 +66,7 @@ class FeatureTest < ActiveSupport::TestCase
       Shrike::Permission.new(User, READ).apply(:name)
     ))
 
-    relation = User.all
+    relation = User.unscoped
     assert_nil relation.first._value_object.clazz_id
     assert_nil relation.first._val(:clazz_id)
     assert_raise(ActiveModel::MissingAttributeError) { assert_nil relation.first.clazz_id }
@@ -56,7 +74,7 @@ class FeatureTest < ActiveSupport::TestCase
       Shrike::Permission.new(User, READ)
     ))
 
-    relation = User.all
+    relation = User.unscoped
     assert_not_nil relation.first._value_object.clazz_id
     assert_not_nil relation.first._val(:clazz_id)
     assert_not_nil relation.first.clazz_id
@@ -78,7 +96,7 @@ class FeatureTest < ActiveSupport::TestCase
       Shrike::Permission.new(Clazz, READ),
       Shrike::Permission.new(User, READ),
       Shrike::Permission.new(User, UPDATE, false, AdvancedConstrain.new(property: "name", value: "To", operator: "include?")),
-      Shrike::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == 'Block'})),
+      Shrike.is_activerecord3? ?  nil : Shrike::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == 'Block'})),
       Shrike::Permission.new(User, [UPDATE, DELETE], false, SimpleConstrain.new("name", "Grade 1", relation: 'clazz')),
       Shrike::Permission.new(User, UPDATE)
     ))
@@ -89,10 +107,12 @@ class FeatureTest < ActiveSupport::TestCase
     user.name = 'Test'
     assert_equal true, user.save
 
-    assert_raise(Shrike::PermissionForbidden) {
-      user.name = "Block"
-      user.save
-    }
+    unless Shrike.is_activerecord3?
+      assert_raise(Shrike::PermissionForbidden) {
+        user.name = "Block"
+        user.save
+      }
+    end
 
     assert_raise(Shrike::NoPermissionError) {
       user.destroy
@@ -185,12 +205,26 @@ class FeatureTest < ActiveSupport::TestCase
     }
   end
 
+  def test_relation_not_reuseable
+    assert_raise(Shrike::NotReuseableError) {
+      relation = User.unscoped
+      relation.to_sql
+      relation_new = relation.where("1 = 1")
+      relation_new.to_sql
+    }
+    relation = User.unscoped
+    reuseable_relation = relation.clone
+    relation.to_sql
+    relation_new = reuseable_relation.where("1 = 1")
+    relation_new.to_sql
+  end
+
   def test_skip
     Shrike.permission_provider.set_permission_package(OrderedPackage.new(
       Shrike::Permission.new(User, READ, true, "age != 100")
     ))
     Shrike.skip do
-      relation = User.all
+      relation = User.unscoped
       relation.to_sql
       assert_equal [], relation.where_values
     end

@@ -6,6 +6,7 @@ module Shrike
       attr_reader :list_create, :list_read, :list_update, :list_delete, :permissions
 
       def initialize(*permissions)
+        permissions.compact!
         @list_create = {}
         @list_read = {}
         @list_update = {}

@@ -52,6 +52,7 @@ module Shrike
       relation.joins!(*self.joins) if self.joins.size > 0
       relation.where!("#{self.clause}") if self.clause
       unless self.procs_read.blank?
+        # Only support ActiveRecord 4
         merging_relation = self.klass.unscoped
         self.procs_read.each do |proc|
           merging_relation = proc.call(merging_relation)
@@ -114,19 +115,16 @@ module Shrike
     private
 
     def init_for_persistence(constrains)
-      if constrains.nil?
-        self.constrains = []
-        return
-      else
-        if !(constrains.is_a?(Shrike::Permissions::Constrain) ||constrains.is_a?(Array))
-          raise ArgumentError.new("constrains has unknown type #{constrains.class}")
-        end
-        constrains = [constrains] if constrains.is_a? Shrike::Permissions::Constrain
-        constrains.each do |constrain|
-          raise "Persistence operation can't use constrain clause" unless constrain.clause.blank?
-        end
-        self.constrains = constrains
+      return if constrains.nil?
+      if !(constrains.is_a?(Shrike::Permissions::Constrain) ||constrains.is_a?(Array))
+        raise ArgumentError.new("constrains has unknown type #{constrains.class}")
       end
+      constrains = [constrains] if constrains.is_a? Shrike::Permissions::Constrain
+      constrains.compact!
+      constrains.each do |constrain|
+        raise "Persistence operation can't use constrain clause" unless constrain.clause.blank?
+      end
+      self.constrains = constrains
     end
 
     def match_value(left, right, operator)
@@ -144,7 +142,7 @@ module Shrike
         self.clause = constrains
       when Array, Shrike::Permissions::Constrain
         constrains = [constrains] if constrains.is_a? Shrike::Permissions::Constrain
-        self.constrains = constrains
+        self.constrains = constrains.compact
         self.clause = build_clause
         self.clause = "not (#{self.clause})" if self.is_allowed == false
       else

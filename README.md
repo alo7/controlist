@@ -1,6 +1,26 @@
 # Shrike
 
-Fine-grained access control library for Ruby ActiveRecord
+## Fine-grained access control library for Ruby ActiveRecord
+
+Shrike support Ruby 1.9 and 2.x, ActiveRecord 3.2 and 4.1+
+
+## Use Case
+
+RBAC (Role-Based Access Control)
+Security for API Server
+Any scenario that need fine-grained or flexible access control
+
+## Feature
+
+* Support ActiveRecord CRUD permissions
+* Support attribute level permission
+* Support association level permission
+* Filter attributes for READ permission
+* Check changed and previous value for persistence operation
+* CRUD permission support lambda, argument is "Relation" for READ or "Object" for persistence(ActiveRecord 4.1+)
+* Attribute value check support lambda and raw sql
+* Modify permissions on the fly
+* Skip permission check on demand
 
 ## Installation
 
@@ -32,21 +52,11 @@ You can use your customized manager or configuration to initialize Shrike
 
 ```
 require 'shrike'
-Shrike.initialize YourManager, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
+Shrike.initialize YourManager #, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
 
 ```
 
-### Feature
-
-* support attribute level permission
-* support association level permission
-* attribute value check support lambda and raw sql
-* persistence permistion for attribute old and new value
-* persistence permistion support Proc
-* modify permissions on the fly
-
-
-### Example
+## Example
 
 ```
 Shrike.permission_provider.set_permission_package(OrderedPackage.new(
@@ -57,7 +67,8 @@ Shrike.permission_provider.set_permission_package(OrderedPackage.new(
     SimpleConstrain.new("age", "null"),
     SimpleConstrain.new("age", [1,2,3]),
     SimpleConstrain.new("clazz_id", -> { Clazz.select(:id).map(&:id) }),
-    AdvancedConstrain.new(clause: "age != 100")
+    AdvancedConstrain.new(clause: "age != 100"),
+    AdvancedConstrain.new(proc_read: lambda{|relation| relation.order("id DESC").limit(3) })
   ])))
 relation = User.all
 relation.to_sql
@@ -65,6 +76,8 @@ assert_equal [:clazz], relation.joins_values
 assert_equal ["(users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2'))" +
               " and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3))" +
               " and (users.clazz_id in (1,2)) and (age != 100)"], relation.where_values
+assert_equal 3, relation.limit_value
+assert_equal ["id DESC"], relation.order_values
 ```
 
 And more examples, please see test/feature_test.rb

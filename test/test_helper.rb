@@ -18,22 +18,7 @@ require 'sqlite3'
 # require shrike
 require 'models/user'
 require 'models/clazz'
-require 'migrate'
-
-class ActiveSupport::TestCase
-  ActiveRecord::Migration.check_pending!
-
-  # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
-  #
-  # Note: You'll currently still have to declare fixtures explicitly in integration tests
-  # -- they do not yet inherit this setting
-
-  self.fixture_path = ROOT_PATH + "/test/fixtures"
-  self.test_order = :random
-  fixtures :all
-
-  # Add more helper methods to be used by all tests here...
-end
+load "test/migrate.rb"
 
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
@@ -41,3 +26,15 @@ require 'shrike'
 require 'shrike/managers/thread_based_manager'
 #Shrike.initialize Shrike::Manager::ThreadBasedManager, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
 Shrike.initialize Shrike::Managers::ThreadBasedManager
+
+unless Shrike.is_activerecord3?
+  class ActiveSupport::TestCase
+    ActiveRecord::Migration.check_pending!
+
+    self.fixture_path = ROOT_PATH + "/test/fixtures"
+    self.test_order = :random if self.respond_to?(:test_order=)
+    fixtures :all
+
+    # Add more helper methods to be used by all tests here...
+  end
+end

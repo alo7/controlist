@@ -23,6 +23,10 @@ module Shrike
       yield
       @permission_provider.close_skip
     end
+
+    def is_activerecord3?
+      ActiveRecord::VERSION::MAJOR == 3
+    end
   end
 
 end

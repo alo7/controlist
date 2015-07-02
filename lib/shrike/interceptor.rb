@@ -39,11 +39,20 @@ module Shrike
       end
 
       def hook_persistence
-        {
-          create: :_create_record,
-          update: :_update_record,
-          delete: [:delete, :destroy]
-        }.each do |operation, methods|
+        if Shrike.is_activerecord3?
+          settings = {
+            create: :create,
+            update: :update,
+            delete: [:delete, :destroy]
+          }
+        else
+          settings = {
+            create: :_create_record,
+            update: :_update_record,
+            delete: [:delete, :destroy]
+          }
+        end
+        settings.each do |operation, methods|
           Array(methods).each do |method|
             ActiveRecord::Persistence.module_eval %Q{
               def #{method}_with_shrike(*args)
@@ -78,15 +87,39 @@ module Shrike
                     end
                   end
                 end
-                #{method}_without_shrike(*args)
-              end
-              alias_method_chain :#{method}, :shrike unless method_defined? :#{method}_without_shrike
-            }
+            #{method}_without_shrike(*args)
           end
+          alias_method_chain :#{method}, :shrike unless method_defined? :#{method}_without_shrike
+            }
         end
       end
+    end
 
-      def hook_read
+    def hook_read
+      if Shrike.is_activerecord3?
+        ActiveRecord::QueryMethods.module_eval do
+          def where!(opts, *rest)
+            return if opts.blank?
+            self.where_values += build_where(opts, rest)
+          end
+          def _select!(*value)
+            self.select_values += Array.wrap(value)
+          end
+          def joins!(*args)
+            return if args.compact.blank?
+            args.flatten!
+            self.joins_values += args
+          end
+        end
+        ActiveRecord::IdentityMap.module_eval do
+          def self.enabled?
+            false
+          end
+          def self.enabled
+            false
+          end
+        end
+      else
         ActiveRecord::Core::ClassMethods.module_eval do
           #Bypass find_by_statement_cache, otherwise will use cached sql which may has wrong permissions
           def find(*args)
@@ -96,52 +129,65 @@ module Shrike
             super
           end
         end
-        ActiveRecord::Relation.class_eval do
-          def build_arel_with_shrike
-            permission_provider = Shrike.permission_provider
-            unless permission_provider.skip?
-              permission_package = permission_provider.get_permission_package
-              permissions = permission_package.list_read[@klass] if permission_package
-              if permissions.blank?
-                self.where!("1 != 1")
-              else
-                permissions.each do |permission|
-                  permission.handle_for_read self
+      end
+      ActiveRecord::Relation.class_eval do
+        def build_arel_with_shrike
+          permission_provider = Shrike.permission_provider
+          if permission_provider.skip? || @shrike_processing
+            build_arel_without_shrike
+          else
+            if @shrike_done
+              raise Shrike::NotReuseableError.new("The relation has built a sql, you can't reuse it, or you can clone it before sql building", self)
+            else
+              @shrike_processing = true
+              permission_provider = Shrike.permission_provider
+              unless permission_provider.skip?
+                permission_package = permission_provider.get_permission_package
+                permissions = permission_package.list_read[@klass] if permission_package
+                if permissions.blank?
+                  self.where!("1 != 1")
+                else
+                  permissions.each do |permission|
+                    permission.handle_for_read self
+                  end
                 end
               end
+              @shrike_processing = false
+              @shrike_done = true
+              build_arel_without_shrike
             end
-            build_arel_without_shrike
           end
-          alias_method_chain :build_arel, :shrike unless method_defined? :build_arel_without_shrike
         end
+        alias_method_chain :build_arel, :shrike unless method_defined? :build_arel_without_shrike
       end
+    end
 
-      def create_value_object_proxy_class(klass)
-        attributes = klass.columns.map(&:name)
-        attributes.delete klass.primary_key
-        proxy_class = Class.new
-        code_block = ""
-        attributes.each do |attribute|
-          code_block += %Q{
+    def create_value_object_proxy_class(klass)
+      attributes = klass.columns.map(&:name)
+      attributes.delete klass.primary_key
+      proxy_class = Class.new
+      code_block = ""
+      attributes.each do |attribute|
+        code_block += %Q{
             def #{attribute}
               @target.#{attribute} rescue nil
             end
-          }
-        end
-        proxy_class.class_eval %Q{
+        }
+      end
+      proxy_class.class_eval %Q{
           def initialize(target)
             @target = target
           end
           def [](attribute)
             @target[attribute] rescue nil
           end
-          #{code_block}
-        }
-        proxy_class
-      end
-
+      #{code_block}
+      }
+      proxy_class
     end
 
   end
+
+end
 
 end

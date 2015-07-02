@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Shrike::VERSION
   spec.authors       = ["Leon Li"]
   spec.email         = ["qianthinking@gmail.com"]
-  spec.summary       = %q{Ruby RBAC(Role Based Access Control) System for ActiveRecord}
-  spec.description   = %q{Ruby RBAC(Role Based Access Control) System for ActiveRecord}
+  spec.summary       = %q{Fine-grained access control library for Ruby ActiveRecord}
+  spec.description   = %q{Use Case: RBAC (Role-Based Access Control), security for API Server and any scenario that need fine-grained or flexible access control}
   spec.homepage      = ""
   spec.license       = "MIT"
 
@@ -26,6 +26,17 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest", "~> 5.7.0"
   spec.add_development_dependency "simplecov", "~> 0.10.0"
   spec.add_development_dependency "sqlite3", "~> 1.3.10"
-  spec.add_development_dependency "rails", "4.2.1"
+  spec.add_development_dependency "activesupport", "~> 4.2.1"
+  spec.add_development_dependency "activerecord", "~> 4.2.1"
+
+  #For ActiveRecord 3 test
+  #spec.add_development_dependency "minitest-rails"
+  #spec.add_development_dependency "minitest-reporters"
+  #spec.add_development_dependency "minitest"
+  #spec.add_development_dependency "test-unit"
+  #spec.add_development_dependency "simplecov", "~> 0.10.0"
+  #spec.add_development_dependency "sqlite3", "~> 1.3.10"
+  #spec.add_development_dependency "activesupport", "~> 3.2.1"
+  #spec.add_development_dependency "activerecord", "~> 3.2.1"
 
 end

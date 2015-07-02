@@ -15,4 +15,12 @@ module Shrike
     end
   end
 
+  class NotReuseableError < ShrikeError
+    attr_reader :relation
+    def initialize(message, relation = nil)
+      @relation = relation
+      super(message)
+    end
+  end
+
 end
