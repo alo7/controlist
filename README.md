@@ -6,9 +6,9 @@ Controlist support Ruby 1.9 and 2.x, ActiveRecord 3.2 and 4.1+
 
 ## Use Case
 
-RBAC (Role-Based Access Control)
-Security for API Server
-Any scenario that need fine-grained or flexible access control
+* RBAC (Role-Based Access Control)
+* Security for API Server
+* Any scenario that need fine-grained or flexible access control
 
 ## Feature
 
