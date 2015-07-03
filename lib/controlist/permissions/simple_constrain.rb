@@ -3,11 +3,9 @@ module Controlist
 
     class SimpleConstrain < Constrain
 
-      def initialize(property, value, hash={})
+      def initialize(property, value)
         self.property = property.to_s
         self.value = value
-        self.relation = hash[:relation]
-        self.table_name = hash[:table_name]
       end
 
     end

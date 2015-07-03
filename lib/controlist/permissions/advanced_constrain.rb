@@ -4,7 +4,7 @@ module Controlist
     class AdvancedConstrain < Constrain
 
       def initialize(hash)
-        self.property = hash[:property]
+        self.property = hash[:property].to_s
         self.value = hash[:value]
         self.relation = hash[:relation]
         self.table_name = hash[:table_name]

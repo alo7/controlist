@@ -23,7 +23,7 @@ class FeatureTest < ActiveSupport::TestCase
     Controlist.permission_provider.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ, true, [
         SimpleConstrain.new("name", "Tom"),
-        SimpleConstrain.new("name", ["Grade 1", "Grade 2"], relation: "clazz"),
+        AdvancedConstrain.new(property: "name", value: ["Grade 1", "Grade 2"], relation: "clazz"),
         AdvancedConstrain.new(property: "age", value: 5, operator: ">="),
         SimpleConstrain.new("age", "null"),
         SimpleConstrain.new("age", [1,2,3]),
@@ -96,15 +96,15 @@ class FeatureTest < ActiveSupport::TestCase
       Controlist::Permission.new(Clazz, READ),
       Controlist::Permission.new(User, READ),
       Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(property: "name", value: "To", operator: "include?")),
-      Controlist.is_activerecord3? ?  nil : Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == 'Block'})),
-      Controlist::Permission.new(User, [UPDATE, DELETE], false, SimpleConstrain.new("name", "Grade 1", relation: 'clazz')),
+      Controlist.is_activerecord3? ?  nil : Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == "Block"})),
+      Controlist::Permission.new(User, [UPDATE, DELETE], false, AdvancedConstrain.new(property: "name", value: "Grade 1", relation: "clazz")),
       Controlist::Permission.new(User, UPDATE)
     ))
 
     user = User.find 3
     assert_not_equal "Tom", user.name
     assert_not_equal "Grade 1", user.clazz.name
-    user.name = 'Test'
+    user.name = "Test"
     assert_equal true, user.save
 
     unless Controlist.is_activerecord3?
