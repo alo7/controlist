@@ -16,11 +16,11 @@ module Controlist
           raise NotImplementedError
         end
 
-        def open_skip
+        def enable_skip
           raise NotImplementedError
         end
 
-        def close_skip
+        def disable_skip
           raise NotImplementedError
         end
 

@@ -56,9 +56,9 @@ module Controlist
           Array(methods).each do |method|
             ActiveRecord::Persistence.module_eval %Q{
               def #{method}_with_controlist(*args)
-                permission_provider = Controlist.permission_provider
-                unless permission_provider.skip?
-                  permission_package = permission_provider.get_permission_package
+                permission_manager = Controlist.permission_manager
+                unless permission_manager.skip?
+                  permission_package = permission_manager.get_permission_package
                   permissions = permission_package.list_#{operation}[self.class] if permission_package
                   if permissions.blank?
                     raise NoPermissionError
@@ -132,17 +132,17 @@ module Controlist
       end
       ActiveRecord::Relation.class_eval do
         def build_arel_with_controlist
-          permission_provider = Controlist.permission_provider
-          if permission_provider.skip? || @controlist_processing
+          permission_manager = Controlist.permission_manager
+          if permission_manager.skip? || @controlist_processing
             build_arel_without_controlist
           else
             if @controlist_done
               raise Controlist::NotReuseableError.new("The relation(#{self} of #{@klass}) has built a sql, you can't reuse it, or you can clone it before sql building.", self)
             else
               @controlist_processing = true
-              permission_provider = Controlist.permission_provider
-              unless permission_provider.skip?
-                permission_package = permission_provider.get_permission_package
+              permission_manager = Controlist.permission_manager
+              unless permission_manager.skip?
+                permission_package = permission_manager.get_permission_package
                 permissions = permission_package.list_read[@klass] if permission_package
                 if permissions.blank?
                   self.where!("1 != 1")

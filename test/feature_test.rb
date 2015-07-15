@@ -20,7 +20,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_read_constrains
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ, true, [
         SimpleConstrain.new("name", "Tom"),
         AdvancedConstrain.new(property: "name", value: ["Grade 1", "Grade 2"], relation: "clazz"),
@@ -45,14 +45,14 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_permission_empty
-    Controlist.permission_provider.set_permission_package(nil)
+    Controlist.permission_manager.set_permission_package(nil)
     relation = User.unscoped
     relation.to_sql
     assert_equal ["1 != 1"], relation.where_values
   end
 
   def test_read_constrains_sql_only
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ, true, "age != 100")
     ))
     relation = User.unscoped
@@ -62,7 +62,7 @@ class FeatureTest < ActiveSupport::TestCase
 
 
   def test_read_apply_properties
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ).apply(:name)
     ))
 
@@ -70,7 +70,7 @@ class FeatureTest < ActiveSupport::TestCase
     assert_nil relation.first._value_object.clazz_id
     assert_nil relation.first._val(:clazz_id)
     assert_raise(ActiveModel::MissingAttributeError) { assert_nil relation.first.clazz_id }
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ)
     ))
 
@@ -81,7 +81,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_update_fail_without_permissions
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ)
     ))
     user = User.find 1
@@ -92,7 +92,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_persistence_constrains
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(Clazz, READ),
       Controlist::Permission.new(User, READ),
       Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(property: "name", value: "To", operator: "include?")),
@@ -118,7 +118,7 @@ class FeatureTest < ActiveSupport::TestCase
       user.destroy
     }
 
-    Controlist.permission_provider.get_permission_package.add_permissions(Controlist::Permission.new(User, DELETE))
+    Controlist.permission_manager.get_permission_package.add_permissions(Controlist::Permission.new(User, DELETE))
     assert_instance_of User, user.destroy
 
     assert_raise(Controlist::PermissionForbidden) {
@@ -144,7 +144,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_persistence_apply_properties
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ),
       Controlist::Permission.new(User, UPDATE, true, SimpleConstrain.new("name", "Tom")).apply(name: "Test", clazz_id: [1, 2]),
     ))
@@ -180,13 +180,13 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_modify_permissions_on_the_fly
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ),
     ))
 
     assert_instance_of User, User.find(1)
 
-    package = Controlist.permission_provider.get_permission_package
+    package = Controlist.permission_manager.get_permission_package
     package.remove_permissions package.permissions.last
 
     assert_raise(ActiveRecord::RecordNotFound) {
@@ -199,7 +199,7 @@ class FeatureTest < ActiveSupport::TestCase
 
   def test_constrains_argument_error
     assert_raise(ArgumentError) {
-      Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+      Controlist.permission_manager.set_permission_package(OrderedPackage.new(
         Controlist::Permission.new(User, READ, true, Object.new)
       ))
     }
@@ -220,7 +220,7 @@ class FeatureTest < ActiveSupport::TestCase
   end
 
   def test_skip
-    Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ, true, "age != 100")
     ))
     Controlist.skip do

@@ -16,11 +16,11 @@ module Controlist
           Thread.current[:skip_controlist] == true
         end
 
-        def open_skip
+        def enable_skip
           Thread.current[:skip_controlist] = true
         end
 
-        def close_skip
+        def disable_skip
           Thread.current[:skip_controlist] = nil
         end
 

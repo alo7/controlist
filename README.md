@@ -59,7 +59,7 @@ Controlist.initialize YourManager #, attribute_proxy: "_val", value_object_proxy
 ## Example
 
 ```ruby
-Controlist.permission_provider.set_permission_package(OrderedPackage.new(
+Controlist.permission_manager.set_permission_package(OrderedPackage.new(
   Controlist::Permission.new(User, READ, true, [
     SimpleConstrain.new("name", "Tom"),
     SimpleConstrain.new("name", ["Grade 1", "Grade 2"], relation: "clazz"),

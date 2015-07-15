@@ -8,10 +8,10 @@ module Controlist
 
   class << self
 
-    attr_accessor :permission_provider, :attribute_proxy, :value_object_proxy, :logger
+    attr_accessor :permission_manager, :attribute_proxy, :value_object_proxy, :logger
 
-    def initialize(permission_provider, config={})
-      @permission_provider = permission_provider
+    def initialize(permission_manager, config={})
+      @permission_manager = permission_manager
       @attribute_proxy = config[:attribute_proxy] || "_val"
       @value_object_proxy = config[:value_object_proxy] || "_value_object"
       @logger = config[:logger] || Logger.new(STDOUT)
@@ -19,9 +19,9 @@ module Controlist
     end
 
     def skip
-      @permission_provider.open_skip
+      @permission_manager.enable_skip
       result = yield
-      @permission_provider.close_skip
+      @permission_manager.disable_skip
       result
     end
 
