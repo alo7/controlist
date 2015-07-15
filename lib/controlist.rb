@@ -20,12 +20,21 @@ module Controlist
 
     def skip
       @permission_provider.open_skip
-      yield
+      result = yield
       @permission_provider.close_skip
+      result
     end
 
     def is_activerecord3?
       ActiveRecord::VERSION::MAJOR == 3
+    end
+
+    def debug(*args, &block)
+      logger.debug *args, &block if @logger_enabled
+    end
+
+    def enable_logger
+      @logger_enabled = true
     end
   end
 

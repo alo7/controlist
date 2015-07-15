@@ -67,7 +67,7 @@ module Controlist
                     matched_permission = nil
                     permissions.each do |permission|
                       if permission.match_for_persistence(self, Controlist::Permission::#{operation.upcase})
-                        Controlist.logger.debug{"Controlist matched to \#{permission.is_allowed ? 'allow' : 'forbid'} \#{permission.inspect}"}
+                        Controlist.debug{"Controlist matched to \#{permission.is_allowed ? 'allow' : 'forbid'} \#{permission.inspect}"}
                         if permission.is_allowed
                           passed = true
                         end
@@ -76,9 +76,9 @@ module Controlist
                       end
                     end
                     if passed
-                      Controlist.logger.debug{"Controlist #{operation} checked: PASSED"}
+                      Controlist.debug{"Controlist #{operation} checked: PASSED"}
                     else
-                      Controlist.logger.debug{"Controlist #{operation} checked: FORBIDDEN"}
+                      Controlist.debug{"Controlist #{operation} checked: FORBIDDEN"}
                       if matched_permission.nil?
                         raise NoPermissionError
                       else
@@ -137,7 +137,7 @@ module Controlist
             build_arel_without_controlist
           else
             if @controlist_done
-              raise Controlist::NotReuseableError.new("The relation has built a sql, you can't reuse it, or you can clone it before sql building", self)
+              raise Controlist::NotReuseableError.new("The relation(#{self} of #{@klass}) has built a sql, you can't reuse it, or you can clone it before sql building.", self)
             else
               @controlist_processing = true
               permission_provider = Controlist.permission_provider
@@ -154,6 +154,7 @@ module Controlist
               end
               @controlist_processing = false
               @controlist_done = true
+              Controlist.debug {"The relation(#{self} of #{@klass}) processed"}
               build_arel_without_controlist
             end
           end

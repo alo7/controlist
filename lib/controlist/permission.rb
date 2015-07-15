@@ -78,7 +78,7 @@ module Controlist
           break
         end
       end
-      Controlist.logger.debug{"Controlist #{operation} properties checked: #{properties_matched}"}
+      Controlist.debug{"Controlist #{operation} properties checked: #{properties_matched}"}
       properties_matched
     end
 
@@ -108,7 +108,7 @@ module Controlist
           inner_matched
         end
       end
-      Controlist.logger.debug{"Controlist #{operation} constrains checked: #{constrain_matched}"}
+      Controlist.debug{"Controlist #{operation} constrains checked: #{constrain_matched}"}
       constrain_matched
     end
 
