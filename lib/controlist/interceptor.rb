@@ -159,6 +159,13 @@ module Controlist
           end
         end
         alias_method_chain :build_arel, :controlist unless method_defined? :build_arel_without_controlist
+
+        if Controlist.is_activerecord3?
+          def arel_with_controlist
+            @arel ||= with_default_scope.where("1=1").build_arel
+          end
+          alias_method_chain :arel, :controlist unless method_defined? :arel_without_controlist
+        end
       end
     end
 
