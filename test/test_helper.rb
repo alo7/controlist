@@ -24,7 +24,7 @@ ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 require 'controlist'
 require 'controlist/managers/thread_based_manager'
-#Controlist.initialize Controlist::Manager::ThreadBasedManager, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
+#Controlist.initialize Controlist::Managers::ThreadBasedManager, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
 Controlist.initialize Controlist::Managers::ThreadBasedManager
 
 unless Controlist.is_activerecord3?
