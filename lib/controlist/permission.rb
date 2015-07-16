@@ -10,7 +10,7 @@ module Controlist
     # properties is hash with property and value pair, operation READ only need keys
     attr_accessor :klass, :operations, :is_allowed, :constrains, :clause, :joins, :properties, :procs_read
 
-    def initialize(klass, operations, is_allowed = true, constrains=nil)
+    def initialize(klass, operations=nil, is_allowed = true, constrains=nil)
       self.procs_read = []
       self.klass = klass
       unless operations.nil?
