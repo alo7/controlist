@@ -49,17 +49,14 @@ module Controlist
 
     def handle_for_read(relation)
       relation._select!(*self.properties.keys) unless self.properties.blank?
-      relation.joins!(*self.joins) if self.joins.size > 0
-      relation.where!("#{self.clause}") if self.clause
+      relation = relation.joins(*self.joins) if self.joins.size > 0
+      relation = relation.where("#{self.clause}") if self.clause
       unless self.procs_read.blank?
-        # Only support ActiveRecord 4
-        merging_relation = self.klass.unscoped
         self.procs_read.each do |proc|
-          merging_relation = proc.call(merging_relation)
+          relation = proc.call(relation)
         end
-        ActiveRecord::Relation::Merger.new(relation, merging_relation).merge
       end
-
+      relation
     end
 
     def match_for_persistence(object, operation)

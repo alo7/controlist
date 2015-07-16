@@ -29,26 +29,19 @@ class FeatureTest < ActiveSupport::TestCase
         SimpleConstrain.new("age", [1,2,3]),
         SimpleConstrain.new("clazz_id", -> { Clazz.select(:id).map(&:id) }),
         AdvancedConstrain.new(clause: "age != 100"),
-        Controlist.is_activerecord3? ?  nil : AdvancedConstrain.new(proc_read: lambda{|relation| relation.order("id DESC").limit(3) })
+        AdvancedConstrain.new(proc_read: lambda{|relation| relation.order("id DESC").limit(3) })
       ])))
 
     relation = User.unscoped
-    relation.to_sql
-    assert_equal [:clazz], relation.joins_values
-    assert_equal ["(users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2'))" +
-                  " and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3))" +
-                  " and (users.clazz_id in (1,2)) and (age != 100)"], relation.where_values
-    unless Controlist.is_activerecord3?
-      assert_equal 3, relation.limit_value
-      assert_equal ["id DESC"], relation.order_values
-    end
+    sql = relation.to_sql.gsub(/ +/, " ")
+    assert_equal true, sql.include?("((users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2')) and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3)) and (users.clazz_id in (1,2)) and (age != 100)) ORDER BY id DESC LIMIT 3")
   end
 
   def test_permission_empty
     Controlist.permission_manager.set_permission_package(nil)
     relation = User.unscoped
-    relation.to_sql
-    assert_equal ["1 != 1"], relation.where_values
+    sql = relation.to_sql
+    assert_equal true, sql.include?("1 != 1")
   end
 
   def test_read_constrains_sql_only
@@ -56,8 +49,8 @@ class FeatureTest < ActiveSupport::TestCase
       Controlist::Permission.new(User, READ, true, "age != 100")
     ))
     relation = User.unscoped
-    relation.to_sql
-    assert_equal ["age != 100"], relation.where_values
+    sql = relation.to_sql
+    assert_equal true, sql.include?("age != 100")
   end
 
 
@@ -96,7 +89,7 @@ class FeatureTest < ActiveSupport::TestCase
       Controlist::Permission.new(Clazz, READ),
       Controlist::Permission.new(User, READ),
       Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(property: "name", value: "To", operator: "include?")),
-      Controlist.is_activerecord3? ?  nil : Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == "Block"})),
+      Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == "Block"})),
       Controlist::Permission.new(User, [UPDATE, DELETE], false, AdvancedConstrain.new(property: "name", value: "Grade 1", relation: "clazz")),
       Controlist::Permission.new(User, UPDATE)
     ))
@@ -107,12 +100,10 @@ class FeatureTest < ActiveSupport::TestCase
     user.name = "Test"
     assert_equal true, user.save
 
-    unless Controlist.is_activerecord3?
-      assert_raise(Controlist::PermissionForbidden) {
-        user.name = "Block"
-        user.save
-      }
-    end
+    assert_raise(Controlist::PermissionForbidden) {
+      user.name = "Block"
+      user.save
+    }
 
     assert_raise(Controlist::NoPermissionError) {
       user.destroy
@@ -205,28 +196,14 @@ class FeatureTest < ActiveSupport::TestCase
     }
   end
 
-  def test_relation_not_reuseable
-    assert_raise(Controlist::NotReuseableError) {
-      relation = User.unscoped
-      relation.to_sql
-      relation_new = relation.where("1 = 1")
-      relation_new.to_sql
-    }
-    relation = User.unscoped
-    reuseable_relation = relation.clone
-    relation.to_sql
-    relation_new = reuseable_relation.where("1 = 1")
-    relation_new.to_sql
-  end
-
   def test_skip
     Controlist.permission_manager.set_permission_package(OrderedPackage.new(
       Controlist::Permission.new(User, READ, true, "age != 100")
     ))
     Controlist.skip do
       relation = User.unscoped
-      relation.to_sql
-      assert_equal [], relation.where_values
+      sql = relation.to_sql
+      assert_equal "SELECT \"users\".* FROM \"users\"", sql.strip
     end
   end
 

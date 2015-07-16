@@ -98,17 +98,8 @@ module Controlist
     def hook_read
       if Controlist.is_activerecord3?
         ActiveRecord::QueryMethods.module_eval do
-          def where!(opts, *rest)
-            return if opts.blank?
-            self.where_values += build_where(opts, rest)
-          end
           def _select!(*value)
             self.select_values += Array.wrap(value)
-          end
-          def joins!(*args)
-            return if args.compact.blank?
-            args.flatten!
-            self.joins_values += args
           end
         end
         ActiveRecord::IdentityMap.module_eval do
@@ -131,42 +122,29 @@ module Controlist
         end
       end
       ActiveRecord::Relation.class_eval do
+        def real_build_arel_with_controlist
+          relation = self
+          permission_manager = Controlist.permission_manager
+          permission_package = permission_manager.get_permission_package
+          permissions = permission_package.list_read[@klass] if permission_package
+          if permissions.blank?
+            relation = self.where("1 != 1")
+          else
+            permissions.each do |permission|
+              relation = permission.handle_for_read relation
+            end
+          end
+          relation.send(:build_arel_without_controlist)
+        end
         def build_arel_with_controlist
           permission_manager = Controlist.permission_manager
-          if permission_manager.skip? || @controlist_processing
+          if permission_manager.skip?
             build_arel_without_controlist
           else
-            if @controlist_done
-              raise Controlist::NotReuseableError.new("The relation(#{self} of #{@klass}) has built a sql, you can't reuse it, or you can clone it before sql building.", self)
-            else
-              @controlist_processing = true
-              permission_manager = Controlist.permission_manager
-              unless permission_manager.skip?
-                permission_package = permission_manager.get_permission_package
-                permissions = permission_package.list_read[@klass] if permission_package
-                if permissions.blank?
-                  self.where!("1 != 1")
-                else
-                  permissions.each do |permission|
-                    permission.handle_for_read self
-                  end
-                end
-              end
-              @controlist_processing = false
-              @controlist_done = true
-              Controlist.debug {"The relation(#{self} of #{@klass}) processed"}
-              build_arel_without_controlist
-            end
+            self.real_build_arel_with_controlist
           end
         end
         alias_method_chain :build_arel, :controlist unless method_defined? :build_arel_without_controlist
-
-        if Controlist.is_activerecord3?
-          def arel_with_controlist
-            @arel ||= with_default_scope.where("1=1").build_arel
-          end
-          alias_method_chain :arel, :controlist unless method_defined? :arel_without_controlist
-        end
       end
     end
 
