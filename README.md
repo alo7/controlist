@@ -17,7 +17,7 @@ Controlist support Ruby 1.9 and 2.x, ActiveRecord 3.2 and 4.1+
 * Support association level permission
 * Filter attributes for READ permission
 * Check changed and previous value for persistence operation
-* CRUD permission support lambda, argument is "Relation" for READ or "Object" for persistence(ActiveRecord 4.1+)
+* CRUD permission support lambda, argument is "Relation" for READ or "Object" for persistence
 * Attribute value check support lambda and raw sql
 * Modify permissions on the fly
 * Skip permission check on demand
@@ -59,10 +59,12 @@ Controlist.initialize YourManager #, attribute_proxy: "_val", value_object_proxy
 ## Example
 
 ```ruby
+
+# For read
 Controlist.permission_manager.set_permission_package(OrderedPackage.new(
   Controlist::Permission.new(User, READ, true, [
     SimpleConstrain.new("name", "Tom"),
-    SimpleConstrain.new("name", ["Grade 1", "Grade 2"], relation: "clazz"),
+    AdvancedConstrain.new(property: "name", value: ["Grade 1", "Grade 2"], relation: "clazz"),
     AdvancedConstrain.new(property: "age", value: 5, operator: ">="),
     SimpleConstrain.new("age", "null"),
     SimpleConstrain.new("age", [1,2,3]),
@@ -70,14 +72,38 @@ Controlist.permission_manager.set_permission_package(OrderedPackage.new(
     AdvancedConstrain.new(clause: "age != 100"),
     AdvancedConstrain.new(proc_read: lambda{|relation| relation.order("id DESC").limit(3) })
   ])))
-relation = User.all
-relation.to_sql
-assert_equal [:clazz], relation.joins_values
-assert_equal ["(users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2'))" +
-              " and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3))" +
-              " and (users.clazz_id in (1,2)) and (age != 100)"], relation.where_values
-assert_equal 3, relation.limit_value
-assert_equal ["id DESC"], relation.order_values
+
+relation = User.unscoped
+sql = relation.to_sql
+assert_equal true, sql.include?("((users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2')) and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3)) and (users.clazz_id in (1,2,3)) and (age != 100)) ORDER BY id DESC LIMIT 3")
+
+# For persistence
+...
+Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(property: "name", value: "To", operator: "include?")),
+Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == "Block"})),
+Controlist::Permission.new(User, [UPDATE, DELETE], false, AdvancedConstrain.new(property: "name", value: ["Grade 1", "Grade 3"], relation: "clazz")),
+...
+
+# For apply attribute
+...
+Controlist::Permission.new(User, READ).apply(:name)
+Controlist::Permission.new(User, UPDATE, true, SimpleConstrain.new("name", "Tom")).apply(name: "Test", clazz_id: [1, 2]),
+
+# For skip
+
+...
+Controlist.skip do
+  relation = User.unscoped
+  sql = relation.to_sql
+  assert_equal "SELECT \"users\".* FROM \"users\"", sql.strip
+end
+...
+
+# For modification on the fly
+package = Controlist.permission_manager.get_permission_package
+package.remove_permissions package.permissions.last
+package.add_permissions Controlist::Permission.new(User, READ)
+
 ```
 
 And more examples, please see [more examples](https://github.com/alo7/controlist/blob/master/test/feature_test.rb)
