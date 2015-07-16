@@ -124,11 +124,15 @@ module Controlist
       self.constrains = constrains
     end
 
-    def match_value(left, right, operator)
+    def match_value(target, value, operator)
       if operator.nil?
-        left == right
+        if value.is_a? Array
+          value.include? target
+        else
+          target == value
+        end
       else
-        left.send(operator.to_sym, right)
+        target.send(operator.to_sym, value)
       end
     end
 

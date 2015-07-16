@@ -34,7 +34,8 @@ class FeatureTest < ActiveSupport::TestCase
 
     relation = User.unscoped
     sql = relation.to_sql.gsub(/ +/, " ")
-    assert_equal true, sql.include?("((users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2')) and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3)) and (users.clazz_id in (1,2)) and (age != 100)) ORDER BY id DESC LIMIT 3")
+    puts sql
+    assert_equal true, sql.include?("((users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2')) and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3)) and (users.clazz_id in (1,2,3)) and (age != 100)) ORDER BY id DESC LIMIT 3")
   end
 
   def test_permission_empty
@@ -90,13 +91,14 @@ class FeatureTest < ActiveSupport::TestCase
       Controlist::Permission.new(User, READ),
       Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(property: "name", value: "To", operator: "include?")),
       Controlist::Permission.new(User, UPDATE, false, AdvancedConstrain.new(proc_persistence: lambda{|object, operation| object.name == "Block"})),
-      Controlist::Permission.new(User, [UPDATE, DELETE], false, AdvancedConstrain.new(property: "name", value: "Grade 1", relation: "clazz")),
+      Controlist::Permission.new(User, [UPDATE, DELETE], false, AdvancedConstrain.new(property: "name", value: ["Grade 1", "Grade 3"], relation: "clazz")),
       Controlist::Permission.new(User, UPDATE)
     ))
 
     user = User.find 3
     assert_not_equal "Tom", user.name
     assert_not_equal "Grade 1", user.clazz.name
+    assert_not_equal "Grade 3", user.clazz.name
     user.name = "Test"
     assert_equal true, user.save
 

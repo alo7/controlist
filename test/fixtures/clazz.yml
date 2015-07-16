@@ -4,3 +4,6 @@ one:
 two:
   id: 2
   name: Grade 2
+three:
+  id: 3
+  name: Grade 3
