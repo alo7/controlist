@@ -21,11 +21,6 @@ module Controlist
 
       private
 
-      # Avoid ActiveModel::MissingAttributeError due to select(attributes) according to constrains
-      #   #suppose attribute_proxy is :_val, value_object_proxy is :_value_object
-      #   user = User.find 1
-      #   user._val(:name)
-      #   user._value_object.name
       def hook_attribute
         ActiveRecord::Persistence.class_eval %Q{
           def #{Controlist.attribute_proxy}(attr)

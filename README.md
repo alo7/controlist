@@ -52,7 +52,7 @@ You can use your customized manager or configuration to initialize Controlist
 
 ```ruby
 require 'controlist'
-Controlist.initialize YourManager #, attribute_proxy: "_val", value_object_proxy: "_value_object", logger: Logger.new(STDOUT)
+Controlist.initialize YourManager #logger: Logger.new(STDOUT)
 
 ```
 

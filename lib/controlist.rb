@@ -10,6 +10,21 @@ module Controlist
 
     attr_accessor :permission_manager, :attribute_proxy, :value_object_proxy, :logger
 
+    ##
+    # example:
+    #       Controlist.initialize Controlist::Managers::ThreadBasedManager
+    #           attribute_proxy: "_val",
+    #           value_object_proxy: "_value_object",
+    #           logger: Logger.new(STDOUT)
+    #
+    # attribute_proxy and value_object_proxy are to avoid ActiveModel::MissingAttributeError
+    # due to select(attributes) according to constrains, suppose attribute_proxy is :_val,
+    # value_object_proxy is :_value_object
+    #       user = User.find 1
+    #       user.id
+    #       user._val(:attr_might_not_be_accessed)
+    #       user._value_object.attr_might_not_be_accessed
+    #
     def initialize(permission_manager, config={})
       @permission_manager = permission_manager
       @attribute_proxy = config[:attribute_proxy] || "_val"
@@ -18,6 +33,15 @@ module Controlist
       Interceptor.hook
     end
 
+
+    ##
+    #  Skip Controlist interceptor
+    #
+    #      Controlist.skip do
+    #        relation = User.unscoped
+    #        sql = relation.to_sql
+    #        assert_equal "SELECT \"users\".* FROM \"users\"", sql.strip
+    #      end
     def skip
       @permission_manager.enable_skip
       result = yield
@@ -37,5 +61,4 @@ module Controlist
       @logger_enabled = true
     end
   end
-
 end
