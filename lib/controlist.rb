@@ -60,5 +60,11 @@ module Controlist
     def enable_logger
       @logger_enabled = true
     end
+
+    def has_permission(klass, operation)
+      permission_package = @permission_manager.get_permission_package
+      permission_package && permission_package.has_permission(klass, operation)
+    end
+
   end
 end

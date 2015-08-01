@@ -40,6 +40,13 @@ module Controlist
         end
       end
 
+      def has_permission(klass, operation)
+        permission_list = instance_variable_get("@list_#{operation}")
+        if permission_list && (permissions = permission_list[klass])
+          permissions.any?(&:is_allowed)
+        end
+      end
+
       private
 
       def add(list, permission)

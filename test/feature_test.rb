@@ -209,4 +209,14 @@ class FeatureTest < ActiveSupport::TestCase
     end
   end
 
+  def test_has_permission_check
+    Controlist.permission_manager.set_permission_package(OrderedPackage.new(
+      Controlist::Permission.new(User, READ, true, "age != 100"),
+      Controlist::Permission.new(Clazz, CREATE, false)
+    ))
+    assert_equal true, Controlist.has_permission(User, READ)
+    assert_nil Controlist.has_permission(User, CREATE)
+    assert_equal false, Controlist.has_permission(Clazz, CREATE)
+  end
+
 end
