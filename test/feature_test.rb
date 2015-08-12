@@ -10,6 +10,7 @@ class FeatureTest < ActiveSupport::TestCase
         load "test/migrate.rb"
         Clazz.create id: 1, name: "Grade 1"
         Clazz.create id: 2, name: "Grade 2"
+        Clazz.create id: 3, name: "Grade 3"
         User.create id: 1, name: "Tom", clazz_id: 1, age: 1
         User.create id: 2, name: "Jerry", clazz_id: 1, age: 1
         User.create id: 3, name: "Henry", clazz_id: 2, age: 1
@@ -36,6 +37,7 @@ class FeatureTest < ActiveSupport::TestCase
     sql = relation.to_sql.gsub(/ +/, " ")
     puts sql
     assert_equal true, sql.include?("((users.name = 'Tom') and (clazzs.name in ('Grade 1','Grade 2')) and (users.age >= 5) and (users.age is null) and (users.age in (1,2,3)) and (users.clazz_id in (1,2,3)) and (age != 100)) ORDER BY id DESC LIMIT 3")
+
   end
 
   def test_permission_empty
