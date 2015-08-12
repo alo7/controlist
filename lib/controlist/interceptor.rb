@@ -82,9 +82,10 @@ module Controlist
                     end
                   end
                 end
-            #{method}_without_controlist(*args)
-          end
-          alias_method_chain :#{method}, :controlist unless method_defined? :#{method}_without_controlist
+                # Avoid effect fetching arel in original update method
+                Controlist.skip { #{method}_without_controlist(*args) }
+              end
+              alias_method_chain :#{method}, :controlist unless method_defined? :#{method}_without_controlist
             }
         end
       end
@@ -97,6 +98,7 @@ module Controlist
             self.select_values += Array.wrap(value)
           end
         end
+        #Avoid id based cache
         ActiveRecord::IdentityMap.module_eval do
           def self.enabled?
             false

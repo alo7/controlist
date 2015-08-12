@@ -43,9 +43,10 @@ module Controlist
     #        assert_equal "SELECT \"users\".* FROM \"users\"", sql.strip
     #      end
     def skip
+      is_skip = @permission_manager.skip?
       @permission_manager.enable_skip
       result = yield
-      @permission_manager.disable_skip
+      @permission_manager.disable_skip unless is_skip
       result
     end
 
