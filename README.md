@@ -2,7 +2,7 @@
 
 ## Fine-grained access control library for Ruby ActiveRecord
 
-Controlist support Ruby 1.9 and 2.x, ActiveRecord 3.2 and 4.1+
+Controlist support Ruby 1.9 and 2.x, ActiveRecord 3.2.x, 4.1+, 5.x
 
 ## Use Case
 

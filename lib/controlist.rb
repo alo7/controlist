@@ -2,9 +2,12 @@ require "controlist/version"
 require "controlist/errors"
 require "controlist/permission"
 require "controlist/interceptor"
+require "controlist/ext/relation_proxy.rb"
 require "controlist/managers/base_manager"
 
 module Controlist
+
+  @logger_enabled = false
 
   class << self
 
@@ -54,8 +57,12 @@ module Controlist
       ActiveRecord::VERSION::MAJOR == 3
     end
 
+    def is_activerecord5?
+      ActiveRecord::VERSION::MAJOR == 5
+    end
+
     def debug(*args, &block)
-      logger.debug *args, &block if @logger_enabled
+      logger.debug(*args, &block) if @logger_enabled
     end
 
     def enable_logger

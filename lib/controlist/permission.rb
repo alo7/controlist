@@ -49,11 +49,18 @@ module Controlist
 
     def handle_for_read(relation)
       relation._select!(*self.properties.keys) unless self.properties.blank?
-      relation = relation.joins(*self.joins) if self.joins.size > 0
-      relation = relation.where("#{self.clause}") if self.clause
-      unless self.procs_read.blank?
-        self.procs_read.each do |proc|
-          relation = proc.call(relation)
+      relation.joins!(*self.joins) if self.joins.size > 0
+      relation.where!("#{self.clause}") if self.clause
+      if self.procs_read.present?
+        if Controlist.is_activerecord5?
+          proxy = Controlist::Ext::RelationProxy.new relation
+          self.procs_read.each do |proc|
+            proc.call(proxy)
+          end
+        else
+          self.procs_read.each do |proc|
+            relation = proc.call(relation)
+          end
         end
       end
       relation

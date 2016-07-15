@@ -13,7 +13,7 @@ module Controlist
         @list_delete = {}
         @permissions = permissions
         @permissions.freeze # avoid bypassing add_permissions/remove_permissions
-        add_permissions *permissions
+        add_permissions(*permissions)
       end
 
       def add_permissions(*permissions)

@@ -1,10 +1,10 @@
 PATH
   remote: .
   specs:
-    controlist (0.1.0)
+    controlist (0.3.2)
 
 GEM
-  remote: http://ruby.taobao.org/
+  remote: https://rubygems.org/
   specs:
     actionpack (3.2.22)
       activemodel (= 3.2.22)
@@ -50,7 +50,6 @@ GEM
     minitest-test (1.1.0)
       minitest (~> 4.0)
     multi_json (1.11.1)
-    power_assert (0.2.3)
     powerbar (1.0.12)
       ansi (~> 1.5.0)
       hashie (>= 1.1.0)
@@ -82,8 +81,6 @@ GEM
       rack (~> 1.0)
       tilt (~> 1.1, != 1.3.0)
     sqlite3 (1.3.10)
-    test-unit (3.1.2)
-      power_assert
     thor (0.19.1)
     tilt (1.4.1)
     tzinfo (0.3.44)
@@ -92,15 +89,13 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  activerecord (~> 3.2.1)
-  activesupport (~> 3.2.1)
+  activerecord (>= 3.2.1, < 5.0.0)
+  activesupport (>= 3.2.1, < 5.0.0)
+  bundler (>= 1.7)
+  controlist!
   minitest
   minitest-rails
   minitest-reporters
-  controlist!
-  simplecov (~> 0.10.0)
-  sqlite3 (~> 1.3.10)
-  test-unit
-
-BUNDLED WITH
-   1.10.2
+  rake (>= 10.0)
+  simplecov
+  sqlite3

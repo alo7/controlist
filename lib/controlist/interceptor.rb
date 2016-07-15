@@ -49,7 +49,7 @@ module Controlist
         end
         settings.each do |operation, methods|
           Array(methods).each do |method|
-            ActiveRecord::Persistence.module_eval %Q{
+            ActiveRecord::Persistence.module_eval %Q!
               def #{method}_with_controlist(*args)
                 permission_manager = Controlist.permission_manager
                 unless permission_manager.skip?
@@ -88,7 +88,7 @@ module Controlist
                 }
               end
               alias_method_chain :#{method}, :controlist unless method_defined? :#{method}_without_controlist
-            }
+            !
           end
         end
       end
@@ -98,6 +98,18 @@ module Controlist
           ActiveRecord::QueryMethods.module_eval do
             def _select!(*value)
               self.select_values += Array.wrap(value)
+              self
+            end
+            def where!(opts, *rest)
+              return if opts.blank?
+              self.where_values += build_where(opts, rest)
+              self
+            end
+            def joins!(*args)
+              return if args.compact.blank?
+              args.flatten!
+              self.joins_values += args
+              self
             end
           end
           #Avoid id based cache
@@ -120,28 +132,45 @@ module Controlist
             end
           end
         end
+
+        if Controlist.is_activerecord5?
+          ActiveRecord::QueryMethods.class_eval do
+            def bound_attributes_with_controlist
+              permission_manager = Controlist.permission_manager
+              if !permission_manager.skip? && !@processed_by_controlist
+                @processed_by_controlist = true
+                process_relation_by_controlist
+              end
+              bound_attributes_without_controlist
+            end
+            alias_method_chain :bound_attributes, :controlist unless method_defined? :bound_attributes_without_controlist
+          end
+        end
         ActiveRecord::Relation.class_eval do
-          def real_build_arel_with_controlist
+          # relation will be replaced only when  rails < 5.0
+          def process_relation_by_controlist
             relation = self
             permission_manager = Controlist.permission_manager
             permission_package = permission_manager.get_permission_package
             permissions = permission_package.list_read[@klass] if permission_package
             if permissions.blank?
-              relation = self.where("1 != 1")
+              relation = self.where!("1 != 1")
             else
               permissions.each do |permission|
                 relation = permission.handle_for_read relation
               end
             end
-            relation.send(:build_arel_without_controlist)
+            relation
           end
+          # relation will be replaced only when  rails < 5.0
           def build_arel_with_controlist
+            relation = self
             permission_manager = Controlist.permission_manager
-            if permission_manager.skip?
-              build_arel_without_controlist
-            else
-              self.real_build_arel_with_controlist
+            if !permission_manager.skip? && !@processed_by_controlist
+              @processed_by_controlist = true
+              relation = process_relation_by_controlist
             end
+            relation.send :build_arel_without_controlist
           end
           alias_method_chain :build_arel, :controlist unless method_defined? :build_arel_without_controlist
         end
