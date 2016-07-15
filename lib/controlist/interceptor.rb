@@ -83,94 +83,96 @@ module Controlist
                   end
                 end
                 # Avoid effect fetching arel in original update method
-                Controlist.skip { #{method}_without_controlist(*args) }
+                Controlist.skip {
+                  #{method}_without_controlist(*args)
+                }
               end
               alias_method_chain :#{method}, :controlist unless method_defined? :#{method}_without_controlist
             }
+          end
         end
       end
-    end
 
-    def hook_read
-      if Controlist.is_activerecord3?
-        ActiveRecord::QueryMethods.module_eval do
-          def _select!(*value)
-            self.select_values += Array.wrap(value)
-          end
-        end
-        #Avoid id based cache
-        ActiveRecord::IdentityMap.module_eval do
-          def self.enabled?
-            false
-          end
-          def self.enabled
-            false
-          end
-        end
-      else
-        ActiveRecord::Core::ClassMethods.module_eval do
-          #Bypass find_by_statement_cache, otherwise will use cached sql which may has wrong permissions
-          def find(*args)
-            super
-          end
-          def find_by(*args)
-            super
-          end
-        end
-      end
-      ActiveRecord::Relation.class_eval do
-        def real_build_arel_with_controlist
-          relation = self
-          permission_manager = Controlist.permission_manager
-          permission_package = permission_manager.get_permission_package
-          permissions = permission_package.list_read[@klass] if permission_package
-          if permissions.blank?
-            relation = self.where("1 != 1")
-          else
-            permissions.each do |permission|
-              relation = permission.handle_for_read relation
+      def hook_read
+        if Controlist.is_activerecord3?
+          ActiveRecord::QueryMethods.module_eval do
+            def _select!(*value)
+              self.select_values += Array.wrap(value)
             end
           end
-          relation.send(:build_arel_without_controlist)
-        end
-        def build_arel_with_controlist
-          permission_manager = Controlist.permission_manager
-          if permission_manager.skip?
-            build_arel_without_controlist
-          else
-            self.real_build_arel_with_controlist
+          #Avoid id based cache
+          ActiveRecord::IdentityMap.module_eval do
+            def self.enabled?
+              false
+            end
+            def self.enabled
+              false
+            end
+          end
+        else
+          ActiveRecord::Core::ClassMethods.module_eval do
+            #Bypass find_by_statement_cache, otherwise will use cached sql which may has wrong permissions
+            def find(*args)
+              super
+            end
+            def find_by(*args)
+              super
+            end
           end
         end
-        alias_method_chain :build_arel, :controlist unless method_defined? :build_arel_without_controlist
-      end
-    end
-
-    def create_value_object_proxy_class(klass)
-      attributes = klass.columns.map(&:name)
-      attributes.delete klass.primary_key
-      proxy_class = Class.new
-      code_block = ""
-      attributes.each do |attribute|
-        code_block += %Q{
-            def #{attribute}
-              @target.#{attribute} rescue nil
+        ActiveRecord::Relation.class_eval do
+          def real_build_arel_with_controlist
+            relation = self
+            permission_manager = Controlist.permission_manager
+            permission_package = permission_manager.get_permission_package
+            permissions = permission_package.list_read[@klass] if permission_package
+            if permissions.blank?
+              relation = self.where("1 != 1")
+            else
+              permissions.each do |permission|
+                relation = permission.handle_for_read relation
+              end
             end
+            relation.send(:build_arel_without_controlist)
+          end
+          def build_arel_with_controlist
+            permission_manager = Controlist.permission_manager
+            if permission_manager.skip?
+              build_arel_without_controlist
+            else
+              self.real_build_arel_with_controlist
+            end
+          end
+          alias_method_chain :build_arel, :controlist unless method_defined? :build_arel_without_controlist
+        end
+      end
+
+      def create_value_object_proxy_class(klass)
+        attributes = klass.columns.map(&:name)
+        attributes.delete klass.primary_key
+        proxy_class = Class.new
+        code_block = ""
+        attributes.each do |attribute|
+          code_block += %Q{
+              def #{attribute}
+                @target.#{attribute} rescue nil
+              end
+          }
+        end
+        proxy_class.class_eval %Q{
+            def initialize(target)
+              @target = target
+            end
+            def [](attribute)
+              @target[attribute] rescue nil
+            end
+        #{code_block}
         }
+        proxy_class
       end
-      proxy_class.class_eval %Q{
-          def initialize(target)
-            @target = target
-          end
-          def [](attribute)
-            @target[attribute] rescue nil
-          end
-      #{code_block}
-      }
-      proxy_class
+
     end
 
   end
-
-end
 
 end
